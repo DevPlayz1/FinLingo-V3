@@ -35,6 +35,7 @@ export interface Lesson {
   keyTakeaways: string[];
   estimatedMinutes: number;
   xpValue: number;
+  isAdminOnly?: boolean;
 }
 
 export interface QuizQuestion {
@@ -137,7 +138,9 @@ export interface LeaderboardEntry {
   isCurrentUser: boolean;
 }
 
-export type ActiveTab = 'dashboard' | 'tracks' | 'practice' | 'leaderboard' | 'profile' | 'legal';
+export type UserRole = 'admin' | 'user';
+
+export type ActiveTab = 'dashboard' | 'tracks' | 'practice' | 'leaderboard' | 'profile' | 'legal' | 'admin';
 
 export type LegalDocId =
   | 'privacy'

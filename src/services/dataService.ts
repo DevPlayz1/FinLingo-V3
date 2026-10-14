@@ -5,7 +5,8 @@ import {
   TrackId,
   Lesson,
   QuizQuestion,
-  LearningTrack
+  LearningTrack,
+  UserRole
 } from '../types';
 import {
   LEARNING_TRACKS,
@@ -19,7 +20,45 @@ import { getLevelInfo } from './gamification';
 const STORAGE_KEYS = {
   PROFILE: 'finlingo_user_profile_v1',
   SPACED_REPETITION: 'finlingo_spaced_rep_v1',
-  LEADERBOARD: 'finlingo_leaderboard_v1'
+  LEADERBOARD: 'finlingo_leaderboard_v1',
+  ROLE: 'finlingo_demo_role_v1',
+  CUSTOM_LESSONS: 'finlingo_custom_lessons_v1',
+  CUSTOM_QUESTIONS: 'finlingo_custom_questions_v1'
+};
+
+const memoryStore: Record<string, string> = {};
+
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+      return memoryStore[key] ?? null;
+    } catch {
+      return memoryStore[key] ?? null;
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+      memoryStore[key] = value;
+    } catch {
+      memoryStore[key] = value;
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+      delete memoryStore[key];
+    } catch {
+      delete memoryStore[key];
+    }
+  }
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -96,7 +135,30 @@ const DEFAULT_SPACED_REPETITION: SpacedRepetitionItem[] = [
 ];
 
 class DataService {
-  // --- TRACKS & LESSONS (Curriculum Repository) ---
+  // --- DEMO ROLE ACCESS CONTROL (Client-side RBAC) ---
+  getCurrentRole(): UserRole {
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.ROLE);
+      if (stored === 'admin' || stored === 'user') return stored;
+    } catch {
+      // Fallback
+    }
+    return 'user';
+  }
+
+  setRole(role: UserRole | null): void {
+    try {
+      if (role) {
+        safeStorage.setItem(STORAGE_KEYS.ROLE, role);
+      } else {
+        safeStorage.removeItem(STORAGE_KEYS.ROLE);
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  // --- TRACKS & LESSONS (Curriculum Repository with Admin-Only Restrictions) ---
   getTracks(): LearningTrack[] {
     return LEARNING_TRACKS;
   }
@@ -106,29 +168,127 @@ class DataService {
   }
 
   getLessons(): Lesson[] {
-    return LESSONS;
+    // 1. Deep clone base curriculum
+    const base: Lesson[] = JSON.parse(JSON.stringify(LESSONS));
+
+    // 2. Default restricted lessons for demonstration:
+    // Lesson acc-6 (Inventory Costing & FIFO/LIFO) and fin-6 (DCF Modeling)
+    base.forEach(l => {
+      if (l.id === 'acc-6' || l.id === 'fin-6') {
+        l.isAdminOnly = true;
+      } else {
+        l.isAdminOnly = false;
+      }
+    });
+
+    // 3. Overlay any saved customizations / admin toggles from localStorage
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_LESSONS);
+      if (stored) {
+        const overrides: Record<string, Partial<Lesson>> = JSON.parse(stored);
+        base.forEach(l => {
+          if (overrides[l.id]) {
+            Object.assign(l, overrides[l.id]);
+          }
+        });
+      }
+    } catch {
+      // Fallback to base
+    }
+
+    return base;
   }
 
   getLessonsByTrack(trackId: TrackId): Lesson[] {
-    return LESSONS.filter(l => l.trackId === trackId).sort((a, b) => a.order - b.order);
+    return this.getLessons().filter(l => l.trackId === trackId).sort((a, b) => a.order - b.order);
   }
 
   getLesson(lessonId: string): Lesson | undefined {
-    return LESSONS.find(l => l.id === lessonId);
+    return this.getLessons().find(l => l.id === lessonId);
+  }
+
+  // Admin action: Toggle lesson restriction status (Protected by role check in application logic)
+  toggleLessonAdminOnly(lessonId: string, isAdminOnly: boolean, role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to alter lesson restriction');
+      return false;
+    }
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_LESSONS);
+      const overrides: Record<string, Partial<Lesson>> = stored ? JSON.parse(stored) : {};
+      overrides[lessonId] = { ...(overrides[lessonId] || {}), isAdminOnly };
+      safeStorage.setItem(STORAGE_KEYS.CUSTOM_LESSONS, JSON.stringify(overrides));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Admin action: Update lesson metadata
+  updateLesson(lessonId: string, updates: Partial<Lesson>, role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to edit lesson');
+      return false;
+    }
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_LESSONS);
+      const overrides: Record<string, Partial<Lesson>> = stored ? JSON.parse(stored) : {};
+      overrides[lessonId] = { ...(overrides[lessonId] || {}), ...updates };
+      safeStorage.setItem(STORAGE_KEYS.CUSTOM_LESSONS, JSON.stringify(overrides));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- QUIZ QUESTIONS REPOSITORY (200+ Bank with Admin Editing Support) ---
+  getQuestions(): QuizQuestion[] {
+    const base: QuizQuestion[] = JSON.parse(JSON.stringify(QUIZ_QUESTIONS));
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+      if (stored) {
+        const overrides: Record<string, Partial<QuizQuestion>> = JSON.parse(stored);
+        base.forEach(q => {
+          if (overrides[q.id]) {
+            Object.assign(q, overrides[q.id]);
+          }
+        });
+      }
+    } catch {
+      // Fallback
+    }
+    return base;
   }
 
   getQuestionsByLesson(lessonId: string): QuizQuestion[] {
-    return QUIZ_QUESTIONS.filter(q => q.lessonId === lessonId);
+    return this.getQuestions().filter(q => q.lessonId === lessonId);
   }
 
   getQuestionsByTrack(trackId: TrackId): QuizQuestion[] {
-    return QUIZ_QUESTIONS.filter(q => q.trackId === trackId);
+    return this.getQuestions().filter(q => q.trackId === trackId);
+  }
+
+  // Admin action: Edit question details
+  updateQuestion(questionId: string, updates: Partial<QuizQuestion>, role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to edit question');
+      return false;
+    }
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+      const overrides: Record<string, Partial<QuizQuestion>> = stored ? JSON.parse(stored) : {};
+      overrides[questionId] = { ...(overrides[questionId] || {}), ...updates };
+      safeStorage.setItem(STORAGE_KEYS.CUSTOM_QUESTIONS, JSON.stringify(overrides));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // --- USER PROFILE REPOSITORY (Designed for Firebase Auth & Firestore) ---
   getUserProfile(): UserProfile {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
+      const stored = safeStorage.getItem(STORAGE_KEYS.PROFILE);
       if (stored) {
         const parsed: UserProfile = JSON.parse(stored);
         if (parsed.displayName === 'Alex Morgan' || !parsed.displayName) {
@@ -152,7 +312,7 @@ class DataService {
     } catch {
       // Fallback
     }
-    return DEFAULT_PROFILE;
+    return JSON.parse(JSON.stringify(DEFAULT_PROFILE));
   }
 
   saveUserProfile(profile: UserProfile): void {
@@ -177,7 +337,7 @@ class DataService {
     };
 
     try {
-      localStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
+      safeStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
     } catch {
       // Ignore write errors
     }
@@ -254,19 +414,19 @@ class DataService {
   // --- SPACED REPETITION ENGINE ---
   getSpacedRepetitionDeck(): SpacedRepetitionItem[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.SPACED_REPETITION);
+      const stored = safeStorage.getItem(STORAGE_KEYS.SPACED_REPETITION);
       if (stored) {
         return JSON.parse(stored);
       }
     } catch {
       // Fallback
     }
-    return DEFAULT_SPACED_REPETITION;
+    return JSON.parse(JSON.stringify(DEFAULT_SPACED_REPETITION));
   }
 
   saveSpacedRepetitionDeck(deck: SpacedRepetitionItem[]): void {
     try {
-      localStorage.setItem(STORAGE_KEYS.SPACED_REPETITION, JSON.stringify(deck));
+      safeStorage.setItem(STORAGE_KEYS.SPACED_REPETITION, JSON.stringify(deck));
     } catch {
       // Ignore
     }
@@ -344,51 +504,113 @@ class DataService {
     this.saveSpacedRepetitionDeck(deck);
   }
 
-  // --- LEADERBOARD REPOSITORY ---
+  // --- LEADERBOARD REPOSITORY (Canonical Sample Dataset as Single Source of Truth) ---
   getLeaderboard(): LeaderboardEntry[] {
+    // 1. Always start from a deep clone of the canonical sample dataset in curriculum.ts
+    const baseLeaderboard: LeaderboardEntry[] = JSON.parse(JSON.stringify(INITIAL_LEADERBOARD));
+    const currentProfile = this.getUserProfile();
+
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.LEADERBOARD);
+      const stored = safeStorage.getItem(STORAGE_KEYS.LEADERBOARD);
       if (stored) {
         const parsed: LeaderboardEntry[] = JSON.parse(stored);
-        parsed.forEach((e) => {
-          if (e.displayName === 'Alex Morgan') {
-            e.displayName = 'You (Student Scholar)';
-          }
-        });
-        return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Overlay any intentional saved demo edits onto the sample entries by ID
+          baseLeaderboard.forEach((entry) => {
+            const match = parsed.find(p => p.id === entry.id);
+            if (match) {
+              entry.xp = match.xp;
+              entry.streak = match.streak;
+              entry.badge = match.badge;
+              entry.displayName = match.displayName;
+              entry.avatar = match.avatar;
+              entry.university = match.university;
+            }
+          });
+        }
       }
     } catch {
-      // Fallback
+      // Fallback directly to baseLeaderboard
     }
-    return INITIAL_LEADERBOARD;
+
+    // 2. Synchronize current demo user from their active profile
+    const userIndex = baseLeaderboard.findIndex(e => e.isCurrentUser || e.id === 'lb-curr');
+    if (userIndex > -1) {
+      const isPublic = currentProfile.privacySettings?.isLeaderboardPublic !== false;
+      const showAvatar = currentProfile.privacySettings?.showAvatarPublicly !== false;
+
+      baseLeaderboard[userIndex].displayName = isPublic ? currentProfile.displayName : 'Anonymous Scholar';
+      baseLeaderboard[userIndex].avatar = showAvatar ? currentProfile.avatar : '';
+      baseLeaderboard[userIndex].university = isPublic ? currentProfile.university : 'Confidential Campus';
+      baseLeaderboard[userIndex].xp = currentProfile.currentXp;
+      baseLeaderboard[userIndex].streak = currentProfile.streakDays;
+      baseLeaderboard[userIndex].badge = currentProfile.levelTitle;
+      baseLeaderboard[userIndex].isCurrentUser = true;
+    }
+
+    // 3. Consistently rank based on XP descending
+    baseLeaderboard.sort((a, b) => b.xp - a.xp);
+    baseLeaderboard.forEach((entry, idx) => {
+      entry.rank = idx + 1;
+    });
+
+    return baseLeaderboard;
   }
 
   private syncCurrentUserToLeaderboard(profile: UserProfile): void {
     const leaderboard = this.getLeaderboard();
-    const userIndex = leaderboard.findIndex(e => e.isCurrentUser || e.id === 'lb-curr');
-    if (userIndex > -1) {
-      const isPublic = profile.privacySettings?.isLeaderboardPublic !== false;
-      const showAvatar = profile.privacySettings?.showAvatarPublicly !== false;
-
-      leaderboard[userIndex].displayName = isPublic ? profile.displayName : 'Anonymous Scholar';
-      leaderboard[userIndex].avatar = showAvatar ? profile.avatar : '';
-      leaderboard[userIndex].university = isPublic ? profile.university : 'Confidential Campus';
-      leaderboard[userIndex].xp = profile.currentXp;
-      leaderboard[userIndex].streak = profile.streakDays;
-      leaderboard[userIndex].badge = profile.levelTitle;
-    }
-
-    // Re-rank based on XP
-    leaderboard.sort((a, b) => b.xp - a.xp);
-    leaderboard.forEach((entry, idx) => {
-      entry.rank = idx + 1;
-    });
-
     try {
-      localStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(leaderboard));
+      safeStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(leaderboard));
     } catch {
       // Ignore
     }
+  }
+
+  // --- ADMIN LEADERBOARD & XP CONTROLS (Protected by Role Checks) ---
+  updateLeaderboardEntry(id: string, updates: Partial<LeaderboardEntry>, role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to update leaderboard entry');
+      return false;
+    }
+    try {
+      const current = this.getLeaderboard();
+      const target = current.find(e => e.id === id);
+      if (!target) return false;
+
+      // If editing demo user, sync to profile
+      if (target.isCurrentUser || id === 'lb-curr') {
+        const profile = this.getUserProfile();
+        if (updates.xp !== undefined) profile.currentXp = Number(updates.xp);
+        if (updates.displayName !== undefined) profile.displayName = updates.displayName;
+        if (updates.university !== undefined) profile.university = updates.university;
+        if (updates.streak !== undefined) profile.streakDays = Number(updates.streak);
+        this.saveUserProfile(profile);
+      } else {
+        const stored = safeStorage.getItem(STORAGE_KEYS.LEADERBOARD);
+        const parsed: LeaderboardEntry[] = stored ? JSON.parse(stored) : JSON.parse(JSON.stringify(INITIAL_LEADERBOARD));
+        const match = parsed.find(p => p.id === id);
+        if (match) {
+          Object.assign(match, updates);
+        } else {
+          parsed.push({ ...target, ...updates });
+        }
+        safeStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(parsed));
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  setDemoUserXp(xp: number, role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to alter demo user XP');
+      return false;
+    }
+    const profile = this.getUserProfile();
+    profile.currentXp = Math.max(0, Number(xp));
+    this.saveUserProfile(profile);
+    return true;
   }
 
   // --- PRIVACY & DATA RIGHTS (DPDPA 2023 & IT ACT 2000) ---
@@ -427,6 +649,9 @@ class DataService {
         STORAGE_KEYS.PROFILE,
         STORAGE_KEYS.SPACED_REPETITION,
         STORAGE_KEYS.LEADERBOARD,
+        STORAGE_KEYS.ROLE,
+        STORAGE_KEYS.CUSTOM_LESSONS,
+        STORAGE_KEYS.CUSTOM_QUESTIONS,
         'finlingo_theme_mode'
       ]
     };
@@ -434,11 +659,21 @@ class DataService {
     return JSON.stringify(dataExportBundle, null, 2);
   }
 
-  // --- RESET & DEMO UTILS ---
+  // --- RESTORE SAMPLE DATA & RESET UTILS ---
+  restoreDefaultData(): void {
+    try {
+      safeStorage.removeItem(STORAGE_KEYS.PROFILE);
+      safeStorage.removeItem(STORAGE_KEYS.SPACED_REPETITION);
+      safeStorage.removeItem(STORAGE_KEYS.LEADERBOARD);
+      safeStorage.removeItem(STORAGE_KEYS.CUSTOM_LESSONS);
+      safeStorage.removeItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+    } catch {
+      // Ignore
+    }
+  }
+
   resetAllData(): void {
-    localStorage.removeItem(STORAGE_KEYS.PROFILE);
-    localStorage.removeItem(STORAGE_KEYS.SPACED_REPETITION);
-    localStorage.removeItem(STORAGE_KEYS.LEADERBOARD);
+    this.restoreDefaultData();
   }
 }
 

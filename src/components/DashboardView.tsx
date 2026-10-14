@@ -334,9 +334,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
               </div>
 
-              <span className="text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-300 uppercase shrink-0">
-                Featured Lesson
-              </span>
+              <div className="flex items-center gap-2">
+                {featuredLesson.isAdminOnly && (
+                  <span className="text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/20 text-amber-300 uppercase shrink-0 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    <span>Admin Only</span>
+                  </span>
+                )}
+                <span className="text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-300 uppercase shrink-0">
+                  Featured Lesson
+                </span>
+              </div>
             </div>
 
             {/* Content Row: Study Desk Illustration + Lesson Info + CTA */}

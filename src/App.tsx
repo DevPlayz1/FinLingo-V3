@@ -16,6 +16,9 @@ import { FirebaseModal } from './components/FirebaseModal';
 import { LegalCenterModal } from './components/LegalCenterModal';
 import { LegalView } from './components/LegalView';
 import { AffirmativeConsentModal } from './components/AffirmativeConsentModal';
+import { RoleSelectScreen } from './components/RoleSelectScreen';
+import { RestrictedAccessModal } from './components/RestrictedAccessModal';
+import { AdminPanel } from './components/AdminPanel';
 
 import { dataService } from './services/dataService';
 import {
@@ -27,7 +30,8 @@ import {
   LeaderboardEntry,
   LearningTrack,
   LegalDocId,
-  ConsentRecord
+  ConsentRecord,
+  UserRole
 } from './types';
 import { Sparkles, CheckCircle2, Flame, Moon, Sun, Shield, Scale, FileText, Cookie, Mail, Lock } from 'lucide-react';
 
@@ -65,10 +69,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
+  // Demo Role state (Phase 2 RBAC)
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => dataService.getCurrentRole());
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [restrictedLessonModal, setRestrictedLessonModal] = useState<Lesson | null>(null);
+
   // Data state
   const [userProfile, setUserProfile] = useState<UserProfile>(() => dataService.getUserProfile());
   const [tracks] = useState<LearningTrack[]>(() => dataService.getTracks());
-  const [lessons] = useState<Lesson[]>(() => dataService.getLessons());
+  const [lessons, setLessons] = useState<Lesson[]>(() => dataService.getLessons());
   const [spacedDeck, setSpacedDeck] = useState<SpacedRepetitionItem[]>(() =>
     dataService.getSpacedRepetitionDeck()
   );
@@ -114,16 +123,46 @@ export default function App() {
     }, 3500);
   };
 
-  // Sync profile & leaderboard helper
+  // Sync profile, lessons & leaderboard helper
   const refreshState = () => {
     const updatedProfile = dataService.getUserProfile();
     setUserProfile(updatedProfile);
+    setLessons(dataService.getLessons());
     setSpacedDeck(dataService.getSpacedRepetitionDeck());
     setLeaderboard(dataService.getLeaderboard());
   };
 
-  // Lesson actions
+  // Role selection & switching
+  const handleSelectRole = (role: UserRole) => {
+    dataService.setRole(role);
+    setCurrentRole(role);
+    setIsRoleModalOpen(false);
+    refreshState();
+    if (role === 'user' && activeTab === 'admin') {
+      setActiveTab('dashboard');
+    }
+    showToast(
+      role === 'admin' ? 'Switched to Academic Admin Role' : 'Switched to College Scholar Role',
+      undefined,
+      'success'
+    );
+  };
+
+  const handleSetActiveTab = (tab: ActiveTab) => {
+    // Application-logic level protection:
+    if (tab === 'admin' && currentRole !== 'admin') {
+      showToast('Access Denied: Admin role required for Admin Panel', undefined, 'xp');
+      return;
+    }
+    setActiveTab(tab);
+  };
+
+  // Lesson actions (Protected by RBAC check)
   const handleOpenLesson = (lesson: Lesson) => {
+    if (currentRole !== 'admin' && lesson.isAdminOnly) {
+      setRestrictedLessonModal(lesson);
+      return;
+    }
     setActiveLessonModal(lesson);
   };
 
@@ -139,8 +178,12 @@ export default function App() {
     refreshState();
   };
 
-  // Quiz actions
+  // Quiz actions (Protected by RBAC check)
   const handleStartQuiz = (lesson: Lesson) => {
+    if (currentRole !== 'admin' && lesson.isAdminOnly) {
+      setRestrictedLessonModal(lesson);
+      return;
+    }
     let questions = dataService.getQuestionsByLesson(lesson.id);
     if (!questions || questions.length === 0) {
       questions = dataService.getQuestionsByTrack(lesson.trackId);
@@ -209,9 +252,9 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    dataService.resetAllData();
+    dataService.restoreDefaultData();
     refreshState();
-    showToast('Demo Progress Reset', undefined, 'success');
+    showToast('Original Sample Data Restored', undefined, 'success');
   };
 
   return (
@@ -223,11 +266,13 @@ export default function App() {
       {/* Top Navigation with Dark Mode & Standalone Tab Sync */}
       <Navbar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSetActiveTab}
         userProfile={userProfile}
+        currentRole={currentRole}
         spacedRepetitionDueCount={spacedDeck.length}
         onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
         onOpenLegalCenter={() => handleOpenLegalCenter('privacy')}
+        onOpenRoleSelection={() => setIsRoleModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
       />
@@ -244,8 +289,8 @@ export default function App() {
             onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
             onOpenLesson={handleOpenLesson}
             onStartQuiz={handleStartQuiz}
-            setActiveTab={setActiveTab}
-            onOpenPractice={() => setActiveTab('practice')}
+            setActiveTab={handleSetActiveTab}
+            onOpenPractice={() => handleSetActiveTab('practice')}
             isDarkMode={isDarkMode}
           />
         )}
@@ -256,6 +301,7 @@ export default function App() {
             lessons={lessons}
             userProfile={userProfile}
             selectedTrackId={selectedTrackId}
+            currentRole={currentRole}
             onSelectTrackId={setSelectedTrackId}
             onOpenLesson={handleOpenLesson}
             onStartQuiz={handleStartQuiz}
@@ -270,7 +316,7 @@ export default function App() {
             userProfile={userProfile}
             onAdvanceItem={handleAdvanceSpacedItem}
             onRemoveItem={handleRemoveSpacedItem}
-            onNavigateToTracks={() => setActiveTab('tracks')}
+            onNavigateToTracks={() => handleSetActiveTab('tracks')}
             isDarkMode={isDarkMode}
           />
         )}
@@ -286,6 +332,8 @@ export default function App() {
         {activeTab === 'profile' && (
           <ProfileView
             userProfile={userProfile}
+            currentRole={currentRole}
+            onOpenRoleSelection={() => setIsRoleModalOpen(true)}
             onUpdateProfile={handleUpdateProfile}
             onResetData={handleResetData}
             onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
@@ -301,6 +349,20 @@ export default function App() {
             userProfile={userProfile}
             onUpdateProfile={handleUpdateProfile}
             onResetData={handleResetData}
+            isDarkMode={isDarkMode}
+          />
+        )}
+
+        {activeTab === 'admin' && (
+          <AdminPanel
+            currentRole={currentRole}
+            lessons={lessons}
+            leaderboard={leaderboard}
+            userProfile={userProfile}
+            onRefreshData={refreshState}
+            onSwitchRole={handleSelectRole}
+            onOpenRoleSelection={() => setIsRoleModalOpen(true)}
+            showToast={showToast}
             isDarkMode={isDarkMode}
           />
         )}
@@ -377,6 +439,26 @@ export default function App() {
               >
                 Backend Schema
               </button>
+              <span>•</span>
+              <button
+                onClick={() => setIsRoleModalOpen(true)}
+                className="text-[#E96746] dark:text-[#F07856] hover:underline font-bold transition cursor-pointer inline-flex items-center gap-1"
+                title="Switch demo role between College Scholar and Academic Admin"
+              >
+                <Shield className="w-3 h-3" />
+                <span>Role: {currentRole === 'admin' ? 'Admin' : 'Student'}</span>
+              </button>
+              {currentRole === 'admin' && (
+                <>
+                  <span>•</span>
+                  <button
+                    onClick={() => setActiveTab('admin')}
+                    className="text-[#E96746] dark:text-[#F07856] hover:underline font-bold transition cursor-pointer"
+                  >
+                    Admin Panel
+                  </button>
+                </>
+              )}
               <span>•</span>
               <button
                 onClick={handleToggleDarkMode}
@@ -545,6 +627,33 @@ export default function App() {
         onOpenPolicyDoc={handleOpenLegalCenter}
         isDarkMode={isDarkMode}
       />
+
+      {/* Restricted Academic Content Modal (RBAC Enforcement) */}
+      {restrictedLessonModal && (
+        <RestrictedAccessModal
+          lesson={restrictedLessonModal}
+          onClose={() => setRestrictedLessonModal(null)}
+          onSwitchToAdmin={() => {
+            setRestrictedLessonModal(null);
+            handleSelectRole('admin');
+          }}
+          isDarkMode={isDarkMode}
+        />
+      )}
+
+      {/* Demo Role Selection Modal / Screen */}
+      {isRoleModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
+          <div className="w-full max-w-5xl my-auto">
+            <RoleSelectScreen
+              currentRole={currentRole}
+              onSelectRole={handleSelectRole}
+              onCancel={() => setIsRoleModalOpen(false)}
+              isDarkMode={isDarkMode}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (

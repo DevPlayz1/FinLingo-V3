@@ -6,15 +6,17 @@ import {
   ArrowRight,
   Bookmark,
   Search,
-  Building
+  Building,
+  Lock
 } from 'lucide-react';
-import { LearningTrack, Lesson, UserProfile } from '../types';
+import { LearningTrack, Lesson, UserProfile, UserRole } from '../types';
 
 interface TracksViewProps {
   tracks: LearningTrack[];
   lessons: Lesson[];
   userProfile: UserProfile;
   selectedTrackId: string | null;
+  currentRole?: UserRole;
   onSelectTrackId: (trackId: string | null) => void;
   onOpenLesson: (lesson: Lesson) => void;
   onStartQuiz: (lesson: Lesson) => void;
@@ -27,6 +29,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
   lessons,
   userProfile,
   selectedTrackId,
+  currentRole = 'user',
   onSelectTrackId,
   onOpenLesson,
   onStartQuiz,
@@ -257,6 +260,12 @@ export const TracksView: React.FC<TracksViewProps> = ({
                     >
                       Lesson #{lesson.order}
                     </span>
+                    {lesson.isAdminOnly && (
+                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/15 px-2 py-0.5 rounded-md border border-amber-500/30">
+                        <Lock className="w-3 h-3" />
+                        <span>Admin Only</span>
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5">
@@ -356,20 +365,36 @@ export const TracksView: React.FC<TracksViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onOpenLesson(lesson)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      isDarkMode
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                      lesson.isAdminOnly && currentRole !== 'admin'
+                        ? 'border border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
+                        : isDarkMode
                         ? 'text-[#FFF8ED] hover:bg-[#1E3A5F]'
                         : 'text-[#173B63] hover:bg-[#E8F0F8]'
                     }`}
                   >
-                    Read Lesson
+                    {lesson.isAdminOnly && currentRole !== 'admin' && <Lock className="w-3 h-3 text-amber-500" />}
+                    <span>{lesson.isAdminOnly && currentRole !== 'admin' ? 'Admin Only' : 'Read Lesson'}</span>
                   </button>
                   <button
                     onClick={() => onStartQuiz(lesson)}
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#F07856] hover:bg-[#D95D3B] text-white shadow-xs transition flex items-center gap-1"
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer ${
+                      lesson.isAdminOnly && currentRole !== 'admin'
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                        : 'bg-[#F07856] hover:bg-[#D95D3B] text-white'
+                    }`}
                   >
-                    <span>Practice Quiz</span>
-                    <ArrowRight className="w-3 h-3" />
+                    {lesson.isAdminOnly && currentRole !== 'admin' ? (
+                      <>
+                        <Lock className="w-3 h-3" />
+                        <span>Locked</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Practice Quiz</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

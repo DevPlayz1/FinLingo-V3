@@ -11,19 +11,22 @@ import {
   Database,
   Sun,
   Moon,
+  Shield,
   GraduationCap,
-  Shield
+  ShieldAlert
 } from 'lucide-react';
-import { ActiveTab, UserProfile } from '../types';
+import { ActiveTab, UserProfile, UserRole } from '../types';
 import { UserAvatar } from './UserAvatar';
 
 interface NavbarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   userProfile: UserProfile;
+  currentRole: UserRole;
   spacedRepetitionDueCount: number;
   onOpenFirebaseModal: () => void;
   onOpenLegalCenter?: () => void;
+  onOpenRoleSelection: () => void;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -32,9 +35,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   userProfile,
+  currentRole,
   spacedRepetitionDueCount,
   onOpenFirebaseModal,
   onOpenLegalCenter,
+  onOpenRoleSelection,
   isDarkMode,
   onToggleDarkMode
 }) => {
@@ -50,6 +55,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy className="w-4 h-4" /> },
     { id: 'profile', label: 'Profile', icon: <User className="w-4 h-4" /> }
   ];
+
+  if (currentRole === 'admin') {
+    navItems.push({
+      id: 'admin',
+      label: 'Admin Panel',
+      icon: <ShieldAlert className="w-4 h-4" />
+    });
+  }
 
   return (
     <header
@@ -95,22 +108,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Gamified Commerce Academy
                 </p>
               </div>
-            </button>
-
-            {/* Standalone "College Edu" Tab */}
-            <button
-              onClick={() => setActiveTab('tracks')}
-              className={`hidden sm:inline-flex items-center gap-1 text-[11px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] ${
-                activeTab === 'tracks'
-                  ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] dark:border-[#F07856] shadow-xs'
-                  : isDarkMode
-                  ? 'bg-[#12233A] text-[#C1CDDC] border-[#1E324F] hover:text-[#FFF8ED] hover:border-[#F07856]/50'
-                  : 'bg-[#FDECE7] text-[#E96746] border-[#E96746]/30 hover:bg-[#E96746] hover:text-white'
-              }`}
-              title="Collegiate Curriculum Tracks (Accounting, Economics, Finance)"
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>College Edu</span>
             </button>
           </div>
 
@@ -239,6 +236,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {userProfile.levelTitle}
                 </span>
               </div>
+            </button>
+
+            {/* Active Demo Role Switcher Badge */}
+            <button
+              onClick={onOpenRoleSelection}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
+                currentRole === 'admin'
+                  ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] shadow-2xs hover:scale-102'
+                  : isDarkMode
+                  ? 'bg-[#12233A] text-[#FFF8ED] border-[#1E324F] hover:bg-[#1E324F]'
+                  : 'bg-[#FFFFFF] text-[#263238] border-[#EDE3D2] hover:bg-[#FFF8ED]'
+              }`}
+              title="Active Demo Role - Click to switch between Admin and Student User"
+            >
+              {currentRole === 'admin' ? (
+                <Shield className="w-3.5 h-3.5" />
+              ) : (
+                <GraduationCap className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
+              )}
+              <span className="capitalize">{currentRole === 'admin' ? 'Admin' : 'Student'}</span>
+              <span className="text-[10px] opacity-75 font-normal underline hidden sm:inline">Switch</span>
             </button>
 
             {/* Architecture Details Modal Button */}

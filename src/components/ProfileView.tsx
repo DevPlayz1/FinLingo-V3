@@ -28,7 +28,7 @@ import {
   EyeOff,
   Lock
 } from 'lucide-react';
-import { UserProfile, LegalDocId } from '../types';
+import { UserProfile, LegalDocId, UserRole } from '../types';
 import { calculateLevelProgress } from '../services/gamification';
 import { UserAvatar } from './UserAvatar';
 import { dataService } from '../services/dataService';
@@ -40,6 +40,8 @@ import {
 
 interface ProfileViewProps {
   userProfile: UserProfile;
+  currentRole?: UserRole;
+  onOpenRoleSelection?: () => void;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onResetData: () => void;
   onOpenFirebaseModal: () => void;
@@ -51,6 +53,8 @@ interface ProfileViewProps {
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   userProfile,
+  currentRole,
+  onOpenRoleSelection,
   onUpdateProfile,
   onResetData,
   onOpenFirebaseModal,
@@ -476,6 +480,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </span>
                 <span className="text-[#F07856] uppercase text-[10px] tracking-wider font-extrabold">
                   {isDarkMode ? 'Dark Active' : 'Light Active'}
+                </span>
+              </button>
+            )}
+
+            {/* Demo Role Switcher */}
+            {onOpenRoleSelection && (
+              <button
+                onClick={onOpenRoleSelection}
+                className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
+                  currentRole === 'admin'
+                    ? 'bg-[#E96746] text-white border-[#E96746] shadow-2xs'
+                    : isDarkMode
+                    ? 'bg-[#0B192C] border-[#1E3A5F] text-[#FFF8ED] hover:bg-[#132238]'
+                    : 'bg-[#FFF8ED] border-[#E8F0F8] text-[#173B63] hover:bg-white'
+                }`}
+                title="Switch between College Scholar (User) and Academic Admin roles"
+              >
+                <span className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  <span>Demo Role Access</span>
+                </span>
+                <span className="uppercase text-[10px] tracking-wider font-extrabold underline">
+                  {currentRole === 'admin' ? 'Admin Active' : 'Student Active'}
                 </span>
               </button>
             )}
@@ -1182,30 +1209,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
               }`}
             >
-              Currently operating on verified local structured repository state with full profile photo uploads and canvas compression. Designed for seamless one-click Firebase Auth, Cloud Firestore &amp; Storage integration.
+              Operating on the canonical sample dataset with instant local persistence. Restore to pristine sample data anytime.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onOpenFirebaseModal}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#173B63] dark:bg-[#1E3A5F] hover:bg-[#0F2742] text-white shadow-xs transition"
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#173B63] dark:bg-[#1E3A5F] hover:bg-[#0F2742] text-white shadow-xs transition cursor-pointer"
             >
-              View Firebase Schema
+              View Backend Schema
             </button>
             <button
               onClick={() => setShowResetConfirm(true)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Demo Progress</span>
+              <span>Restore Sample Data</span>
             </button>
           </div>
         </div>
 
         {showResetConfirm && (
           <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/30 flex items-center justify-between gap-3 text-xs text-[#7F1D1D]">
-            <span>Reset all XP, streaks, and quiz attempts to initial demo state?</span>
+            <span>Restore all XP, streaks, completed lessons, and rankings to the original sample dataset?</span>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => {
