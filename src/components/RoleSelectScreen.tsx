@@ -87,11 +87,16 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
             </div>
 
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#E96746] dark:text-[#F07856]">
-                Learner Experience
-              </span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#E96746] dark:text-[#F07856]">
+                  Learner Profile
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#E96746]/10 text-[#E96746] dark:text-[#F07856]">
+                  Student Scholar
+                </span>
+              </div>
               <h2
-                className={`text-2xl font-black mt-1 ${
+                className={`text-2xl font-black ${
                   isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
                 }`}
               >
@@ -102,8 +107,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                 }`}
               >
-                Full access to standard commerce curriculum, interactive quizzes, spaced repetition,
-                and academic leaderboard progression.
+                Dedicated local profile for <strong>Student Scholar</strong>. Tracks lessons, XP points, quiz history, achievements, and streaks completely isolated from admin edits.
               </p>
             </div>
 
@@ -189,11 +193,16 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
             </div>
 
             <div>
-              <span className="text-xs font-extrabold uppercase tracking-wider text-[#E96746] dark:text-[#F07856]">
-                Curriculum Governance
-              </span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#E96746] dark:text-[#F07856]">
+                  Administrator Profile
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  Prof. Eleanor Vance
+                </span>
+              </div>
               <h2
-                className={`text-2xl font-black mt-1 ${
+                className={`text-2xl font-black ${
                   isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
                 }`}
               >
@@ -204,8 +213,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                 }`}
               >
-                Access the dedicated Admin Panel to manage curriculum, toggle restricted lessons,
-                edit quiz questions, adjust sample leaderboard scores, and test RBAC rules.
+                Dedicated local profile for <strong>Prof. Eleanor Vance</strong>. Manages restricted content, curriculum locks, question bank edits, and administrative scores without overwriting student progress.
               </p>
             </div>
 

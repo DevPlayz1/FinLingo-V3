@@ -120,6 +120,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Leaderboard edit state
   const [editingEntry, setEditingEntry] = useState<LeaderboardEntry | null>(null);
   const [demoUserXpInput, setDemoUserXpInput] = useState<number>(userProfile.currentXp);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   // 1. Toggle restricted status on a lesson
   const handleToggleLessonRestriction = (lesson: Lesson) => {
@@ -204,23 +205,37 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // 5. Quick XP update for Demo User
+  // 5. Quick XP update specifically targeting Demo User (Student Scholar)
   const handleApplyDemoUserXp = () => {
-    const success = dataService.setDemoUserXp(demoUserXpInput, currentRole);
+    const success = dataService.setDemoUserXp(demoUserXpInput, currentRole, 'user');
     if (success) {
       onRefreshData();
-      showToast(`User XP Updated to ${demoUserXpInput}`, demoUserXpInput, 'xp');
+      showToast(`Student Scholar XP Updated to ${demoUserXpInput}`, demoUserXpInput, 'xp');
     }
   };
 
-  // 6. Reset all demo modifications
-  const handleResetSampleData = () => {
-    if (window.confirm('Reset all demo modifications, custom lessons, and scores back to canonical sample defaults?')) {
-      dataService.restoreDefaultData();
-      onRefreshData();
-      setDemoUserXpInput(420);
-      showToast('Sample Dataset Restored to Defaults', undefined, 'success');
-    }
+  // 6. Safe Per-Profile Reset handlers
+  const handleResetAdminOnly = () => {
+    dataService.restoreDefaultData('admin');
+    onRefreshData();
+    setResetModalOpen(false);
+    showToast('Admin Content & Curriculum Settings Restored', undefined, 'success');
+  };
+
+  const handleResetStudentOnly = () => {
+    dataService.restoreDefaultData('user');
+    onRefreshData();
+    setDemoUserXpInput(420);
+    setResetModalOpen(false);
+    showToast('Student Scholar Progress Restored (Admin Settings Untouched)', undefined, 'success');
+  };
+
+  const handleResetAll = () => {
+    dataService.restoreDefaultData('all');
+    onRefreshData();
+    setDemoUserXpInput(420);
+    setResetModalOpen(false);
+    showToast('All Demo Data Restored to Defaults', undefined, 'success');
   };
 
   // Filtered lessons
@@ -301,15 +316,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             Switch Demo Role
           </button>
           <button
-            onClick={handleResetSampleData}
-            className={`p-2.5 rounded-xl border transition cursor-pointer ${
+            onClick={() => setResetModalOpen(true)}
+            className={`px-3 py-2.5 rounded-xl border transition cursor-pointer flex items-center gap-1.5 ${
               isDarkMode
-                ? 'border-[#1E324F] text-[#C1CDDC] hover:text-rose-400'
-                : 'border-[#EDE3D2] text-[#52647A] hover:text-rose-600'
+                ? 'border-[#1E324F] text-[#C1CDDC] hover:text-rose-400 hover:border-rose-400/40'
+                : 'border-[#EDE3D2] text-[#52647A] hover:text-rose-600 hover:border-rose-300'
             }`}
-            title="Restore default sample curriculum and scores"
+            title="Safe Demo Reset Options"
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw className="w-4 h-4 text-rose-500" />
+            <span className="text-xs font-bold hidden sm:inline">Reset Options</span>
           </button>
         </div>
       </div>
@@ -1232,6 +1248,109 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Safe Demo Reset Modal */}
+      {resetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className={`w-full max-w-lg rounded-3xl border shadow-2xl p-6 sm:p-7 space-y-6 ${
+              isDarkMode
+                ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]'
+                : 'bg-white border-[#EDE3D2] text-[#263238]'
+            }`}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#EDE3D2] dark:border-[#1E324F]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg">Safe Reset Center</h3>
+                  <p className="text-xs text-[#52647A] dark:text-[#C1CDDC]">
+                    Independent Profile &amp; Content Restoration
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setResetModalOpen(false)}
+                className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs sm:text-sm">
+              <p className="text-[#52647A] dark:text-[#C1CDDC]">
+                FinLingo maintains two strictly isolated demo profiles. Select which dataset you want to restore without affecting the other:
+              </p>
+
+              {/* Option 1: Admin Content & Settings */}
+              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-amber-600 dark:text-amber-400 text-sm">
+                    Option 1: Reset Admin Content &amp; Overrides
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    Recommended
+                  </span>
+                </div>
+                <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] leading-relaxed">
+                  Restores default lesson lock statuses, question edits, and sample leaderboard scores. <strong>Student Scholar progress, XP, completed lessons, and streaks are 100% preserved.</strong>
+                </p>
+                <button
+                  onClick={handleResetAdminOnly}
+                  className="w-full mt-1 py-2 px-3 rounded-xl font-bold text-xs bg-amber-600 hover:bg-amber-700 text-white transition cursor-pointer shadow-xs"
+                >
+                  Reset Admin Content Only
+                </button>
+              </div>
+
+              {/* Option 2: Student Scholar Progress */}
+              <div className="p-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 space-y-2">
+                <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm block">
+                  Option 2: Reset Demo Student Progress
+                </span>
+                <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] leading-relaxed">
+                  Resets the Student Scholar account back to Level 2, 420 XP, and 3-day streak. <strong>Your Admin curriculum configurations and custom questions remain untouched.</strong>
+                </p>
+                <button
+                  onClick={handleResetStudentOnly}
+                  className="w-full mt-1 py-2 px-3 rounded-xl font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white transition cursor-pointer shadow-xs"
+                >
+                  Reset Student Progress Only
+                </button>
+              </div>
+
+              {/* Option 3: Full Reset */}
+              <div className="p-3.5 rounded-2xl border border-[#EDE3D2] dark:border-[#1E324F] flex items-center justify-between gap-3">
+                <div>
+                  <span className="font-bold text-xs block text-rose-600 dark:text-rose-400">
+                    Option 3: Full Reset (Both Profiles)
+                  </span>
+                  <span className="text-[11px] text-[#52647A] dark:text-[#C1CDDC]">
+                    Restore everything to pristine initial factory state.
+                  </span>
+                </div>
+                <button
+                  onClick={handleResetAll}
+                  className="py-1.5 px-3 rounded-xl font-semibold text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-300 dark:border-rose-900 transition cursor-pointer shrink-0"
+                >
+                  Reset All
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setResetModalOpen(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

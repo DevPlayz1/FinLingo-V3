@@ -78,6 +78,52 @@ export interface Achievement {
   category: 'streak' | 'xp' | 'accuracy' | 'mastery';
 }
 
+export interface LessonQuizRecord {
+  lessonId: string;
+  bestScore: number;
+  totalQuestions: number;
+  bestEarnedXp: number;
+  attemptsCount: number;
+  passed: boolean;
+  lastAttemptAt: number;
+  isPerfect: boolean;
+}
+
+export interface LessonCompletionResult {
+  profile: UserProfile;
+  isNewlyCompleted: boolean;
+  awardedXp: number;
+  newAchievements: Achievement[];
+  leveledUp: boolean;
+  newLevel?: number;
+  newLevelTitle?: string;
+  streakInfo: {
+    streakIncremented: boolean;
+    currentStreak: number;
+    bonusXp: number;
+  };
+}
+
+export interface QuizCompletionResult {
+  profile: UserProfile;
+  awardedXp: number;
+  potentialXp: number;
+  previousBestXp: number;
+  isFirstAttempt: boolean;
+  isImprovement: boolean;
+  isDuplicateSubmission: boolean;
+  isPerfect: boolean;
+  newAchievements: Achievement[];
+  leveledUp: boolean;
+  newLevel?: number;
+  newLevelTitle?: string;
+  streakInfo: {
+    streakIncremented: boolean;
+    currentStreak: number;
+    bonusXp: number;
+  };
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -101,6 +147,7 @@ export interface UserProfile {
     totalCorrect: number;
     perfectQuizzesCount: number;
   };
+  lessonQuizRecords?: Record<string, LessonQuizRecord>;
   trackProgress: {
     accounting: number; // percentage 0-100
     economics: number;

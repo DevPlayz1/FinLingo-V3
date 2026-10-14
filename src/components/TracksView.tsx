@@ -60,6 +60,13 @@ export const TracksView: React.FC<TracksViewProps> = ({
 
   const activeTrack = tracks.find((t) => t.id === selectedTrackId);
 
+  // Compute next available uncompleted lesson in current view
+  const uncompletedEligible = lessons
+    .filter((l) => (selectedTrackId ? l.trackId === selectedTrackId : true))
+    .filter((l) => !userProfile.completedLessonIds.includes(l.id))
+    .filter((l) => currentRole === 'admin' || !l.isAdminOnly);
+  const nextUpLessonId = uncompletedEligible[0]?.id;
+
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header and Track Selector Bar */}
@@ -243,7 +250,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
               <div>
                 {/* Lesson Header Tags */}
                 <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
                         isDarkMode
@@ -266,9 +273,14 @@ export const TracksView: React.FC<TracksViewProps> = ({
                         <span>Admin Only</span>
                       </span>
                     )}
+                    {lesson.id === nextUpLessonId && !isCompleted && (
+                      <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-md border border-blue-300 dark:border-blue-700">
+                        Next Up
+                      </span>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
                     <button
                       onClick={() => onToggleBookmark(lesson.id)}
                       className={`p-1.5 rounded-lg transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
@@ -286,6 +298,11 @@ export const TracksView: React.FC<TracksViewProps> = ({
                       <span className="flex items-center gap-1 text-[11px] font-bold text-[#16A34A] bg-[#DCFCE7] px-2 py-0.5 rounded-full border border-[#16A34A]/20">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Mastered</span>
+                      </span>
+                    )}
+                    {userProfile.lessonQuizRecords?.[lesson.id] && (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-900/30 px-2 py-0.5 rounded-full border border-amber-300/40">
+                        Quiz: {userProfile.lessonQuizRecords[lesson.id].bestScore}/{userProfile.lessonQuizRecords[lesson.id].totalQuestions}
                       </span>
                     )}
                   </div>
@@ -374,7 +391,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
                     }`}
                   >
                     {lesson.isAdminOnly && currentRole !== 'admin' && <Lock className="w-3 h-3 text-amber-500" />}
-                    <span>{lesson.isAdminOnly && currentRole !== 'admin' ? 'Admin Only' : 'Read Lesson'}</span>
+                    <span>{lesson.isAdminOnly && currentRole !== 'admin' ? 'Admin Only' : isCompleted ? 'Review Lesson' : 'Read Lesson'}</span>
                   </button>
                   <button
                     onClick={() => onStartQuiz(lesson)}
@@ -391,7 +408,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
                       </>
                     ) : (
                       <>
-                        <span>Practice Quiz</span>
+                        <span>{userProfile.lessonQuizRecords?.[lesson.id] ? 'Retake Quiz' : 'Practice Quiz'}</span>
                         <ArrowRight className="w-3 h-3" />
                       </>
                     )}

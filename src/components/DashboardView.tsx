@@ -21,9 +21,10 @@ import {
   FileText,
   Trophy,
   User,
-  Coins
+  Coins,
+  Crown
 } from 'lucide-react';
-import { UserProfile, LearningTrack, Lesson, ActiveTab, LeaderboardEntry } from '../types';
+import { UserProfile, LearningTrack, Lesson, ActiveTab, LeaderboardEntry, UserRole } from '../types';
 import { calculateLevelProgress, LEVEL_TIERS } from '../services/gamification';
 import { UserAvatar } from './UserAvatar';
 
@@ -31,6 +32,7 @@ interface DashboardViewProps {
   userProfile: UserProfile;
   tracks: LearningTrack[];
   lessons: Lesson[];
+  currentRole?: UserRole;
   spacedRepetitionDueCount: number;
   leaderboard?: LeaderboardEntry[];
   onSelectTrack: (trackId: string) => void;
@@ -45,6 +47,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   userProfile,
   tracks,
   lessons,
+  currentRole = 'user',
   spacedRepetitionDueCount,
   onSelectTrack,
   onOpenLesson,
@@ -59,11 +62,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     LEVEL_TIERS.find((t) => t.level === userProfile.level + 1) ||
     LEVEL_TIERS[LEVEL_TIERS.length - 1];
 
-  // Featured Lesson (matches reference: Accrual vs. Cash Accounting if available, or first uncompleted)
-  const featuredLesson =
-    lessons.find((l) => l.title.toLowerCase().includes('accrual') || l.term.toLowerCase().includes('accrual')) ||
-    lessons.find((l) => !userProfile.completedLessonIds.includes(l.id)) ||
+  // Next Available Lesson Resolver:
+  // Evaluates curriculum in canonical sequence (Accounting -> Economics -> Finance)
+  // Identifies the exact next uncompleted lesson for the student, respecting role permissions
+  const trackOrder = ['accounting', 'economics', 'finance'];
+  const sortedLessons = [...lessons].sort((a, b) => {
+    const trackDiff = trackOrder.indexOf(a.trackId) - trackOrder.indexOf(b.trackId);
+    if (trackDiff !== 0) return trackDiff;
+    return a.order - b.order;
+  });
+
+  const eligibleLessons = sortedLessons.filter((l) => {
+    if (currentRole !== 'admin' && l.isAdminOnly) return false;
+    return true;
+  });
+
+  const nextAvailableLesson =
+    eligibleLessons.find((l) => !userProfile.completedLessonIds.includes(l.id)) ||
+    eligibleLessons[0] ||
     lessons[0];
+
+  const isNextLessonCompleted = userProfile.completedLessonIds.includes(nextAvailableLesson.id);
+  const nextLessonTrack = tracks.find((t) => t.id === nextAvailableLesson.trackId) || tracks[0];
 
   // Specific tracks by ID for explicit matching
   const accountingTrack = tracks.find((t) => t.id === 'accounting') || tracks[0];
@@ -83,6 +103,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const accStats = getTrackStats('accounting');
   const ecoStats = getTrackStats('economics');
   const finStats = getTrackStats('finance');
+  const nextLessonTrackStats = getTrackStats(nextAvailableLesson.trackId);
 
   // Accuracy calculation
   const accuracy =
@@ -133,14 +154,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="inline-block animate-wave">👋</span>
             </h1>
 
-            <p className={`text-xs sm:text-sm font-semibold ${secondaryText}`}>
-              <span>{userProfile.levelTitle}</span>
-              <span className="mx-1.5 opacity-40">·</span>
-              <span>Next level in </span>
-              <strong className="text-[#E96746] dark:text-[#F07856] font-extrabold">
-                {levelProgress.neededXp > 0 ? `${levelProgress.neededXp} XP` : '80 XP'}
-              </strong>
-            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#E96746]/10 text-[#E96746] dark:bg-[#F07856]/20 dark:text-[#F07856] border border-[#E96746]/20">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Level {userProfile.level}: {userProfile.levelTitle}
+              </span>
+              <span className={`text-xs font-medium ${secondaryText}`}>
+                {levelProgress.neededXp > 0 ? (
+                  <>
+                    <strong className="text-[#E96746] dark:text-[#F07856] font-bold">{levelProgress.neededXp} XP</strong> to {nextTier.title} ({levelProgress.percent}% of Level {userProfile.level})
+                  </>
+                ) : (
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-bold">Highest Career Rank Mastered!</strong>
+                )}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -289,23 +317,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Card 5: Keep Going! Card (Milestone Promo Tile) */}
         <div className="col-span-2 md:col-span-1 p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3 shadow-2xs bg-[#FEF5F1] dark:bg-[#1E2E42] border-[#FCE0D4] dark:border-[#2A4365]">
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-[#FDECE7] dark:bg-[#253952] text-[#E96746] dark:text-[#F07856]">
               <Award className="w-4 h-4" />
             </div>
-            <div className="min-w-0">
-              <span className={`block text-xs font-black ${primaryText}`}>
-                Keep Going!
-              </span>
-              <p className={`text-[11px] leading-tight line-clamp-2 ${secondaryText}`}>
-                You're <strong className="text-[#E96746] dark:text-[#F07856] font-extrabold">{levelProgress.neededXp > 0 ? levelProgress.neededXp : 80} XP</strong> away from {nextTier.title}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className={`block text-xs font-black ${primaryText}`}>
+                  Goal: {nextTier.title}
+                </span>
+                <span className="text-[10px] font-black text-[#E96746] dark:text-[#F07856]">
+                  {levelProgress.percent}%
+                </span>
+              </div>
+              <p className={`text-[11px] leading-tight line-clamp-1 ${secondaryText}`}>
+                {levelProgress.neededXp > 0 ? (
+                  <>
+                    <strong className="text-[#E96746] dark:text-[#F07856] font-extrabold">{levelProgress.neededXp} XP</strong> to Level {nextTier.level}
+                  </>
+                ) : (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Top Rank Reached</span>
+                )}
               </p>
+              {/* Mini level progress meter */}
+              <div className="w-full bg-slate-200 dark:bg-slate-700 h-1 rounded-full overflow-hidden mt-1.5">
+                <div
+                  className="bg-[#E96746] dark:bg-[#F07856] h-full rounded-full transition-all duration-300"
+                  style={{ width: `${levelProgress.percent}%` }}
+                />
+              </div>
             </div>
           </div>
           <button
-            onClick={() => onOpenLesson(featuredLesson)}
+            onClick={() => onOpenLesson(nextAvailableLesson)}
             className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white shadow-xs cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] transition-transform hover:scale-105"
-            title="Continue Learning"
+            title="Open Next Available Lesson"
           >
             <ArrowRight className="w-4 h-4" />
           </button>
@@ -318,9 +364,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* ----------------- LEFT 8 COLUMNS ----------------- */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Navy Featured Learning Panel */}
+          {/* Navy Featured / Next Available Learning Panel */}
           <section
-            aria-label="Continue Learning Feature"
+            aria-label="Next Available Lesson"
             className="rounded-3xl border border-[#1E3A5F] bg-[#132A46] p-6 sm:p-7 text-white shadow-md relative overflow-hidden"
           >
             {/* Header with Featured Lesson Pill */}
@@ -335,14 +381,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
-                {featuredLesson.isAdminOnly && (
+                {nextAvailableLesson.isAdminOnly && (
                   <span className="text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full border border-amber-500/50 bg-amber-500/20 text-amber-300 uppercase shrink-0 flex items-center gap-1">
                     <Lock className="w-3 h-3" />
                     <span>Admin Only</span>
                   </span>
                 )}
                 <span className="text-[11px] font-extrabold tracking-wider px-3 py-1 rounded-full border border-amber-400/40 bg-amber-400/10 text-amber-300 uppercase shrink-0">
-                  Featured Lesson
+                  {isNextLessonCompleted ? 'Review Lesson' : 'Next Available Lesson'}
                 </span>
               </div>
             </div>
@@ -350,8 +396,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Content Row: Study Desk Illustration + Lesson Info + CTA */}
             <div className="flex flex-col md:flex-row items-center gap-6">
               {/* Study Desk Graphic with Circular Play Overlay */}
-              <div className="w-full md:w-52 h-32 rounded-2xl relative shrink-0 overflow-hidden shadow-inner bg-gradient-to-br from-[#1E3E66] to-[#0E1E33] border border-white/10 flex items-center justify-center group cursor-pointer"
-                   onClick={() => onOpenLesson(featuredLesson)}>
+              <div
+                className="w-full md:w-52 h-32 rounded-2xl relative shrink-0 overflow-hidden shadow-inner bg-gradient-to-br from-[#1E3E66] to-[#0E1E33] border border-white/10 flex items-center justify-center group cursor-pointer"
+                onClick={() => onOpenLesson(nextAvailableLesson)}
+              >
                 {/* SVG Stylized Study Desk with Calculator & Ledger */}
                 <svg viewBox="0 0 200 130" fill="none" className="w-full h-full object-cover">
                   <rect width="200" height="130" fill="#1E3E66" />
@@ -387,26 +435,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
               {/* Lesson Text & Progress Meter */}
               <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-white/10 text-amber-300 border border-white/20">
+                    {nextLessonTrack.title} · Lesson #{nextAvailableLesson.order}
+                  </span>
+                  {isNextLessonCompleted && (
+                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Mastered
+                    </span>
+                  )}
+                </div>
+
                 <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-                  {featuredLesson.title}
+                  {nextAvailableLesson.title}
                 </h3>
 
-                <p className="text-xs text-slate-300 font-semibold">
-                  {featuredLesson.trackId === 'accounting' ? 'Accounting' : featuredLesson.trackId === 'economics' ? 'Economics' : 'Finance'} · Core Concept
-                </p>
-
                 <p className="text-xs sm:text-sm text-slate-200 leading-relaxed line-clamp-2">
-                  {featuredLesson.shortDefinition}
+                  {nextAvailableLesson.shortDefinition}
                 </p>
 
-                {/* Progress Bar & Metric */}
+                {/* Track Progress Bar & Metric */}
                 <div className="pt-2">
                   <div className="w-full bg-slate-700/80 h-2 rounded-full overflow-hidden">
-                    <div className="bg-[#E96746] dark:bg-[#F07856] h-full rounded-full transition-all duration-300" style={{ width: '60%' }} />
+                    <div
+                      className="bg-[#E96746] dark:bg-[#F07856] h-full rounded-full transition-all duration-300"
+                      style={{ width: `${nextLessonTrackStats.percent}%` }}
+                    />
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-300 font-medium">
-                    <span>60% Complete</span>
-                    <span>{featuredLesson.estimatedMinutes || 6} min left</span>
+                    <span>
+                      Track Progress: {nextLessonTrackStats.completedCount}/{nextLessonTrackStats.totalCount} Lessons ({nextLessonTrackStats.percent}%)
+                    </span>
+                    <span className="text-[#F07856] font-bold">
+                      +{nextAvailableLesson.xpValue} XP reward · {nextAvailableLesson.estimatedMinutes} min
+                    </span>
                   </div>
                 </div>
               </div>
@@ -414,10 +477,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {/* Continue Button */}
               <div className="shrink-0 w-full md:w-auto">
                 <button
-                  onClick={() => onOpenLesson(featuredLesson)}
+                  onClick={() => onOpenLesson(nextAvailableLesson)}
                   className="w-full md:w-auto px-5 py-3 rounded-xl font-bold text-sm text-white shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] transition-all hover:scale-102"
                 >
-                  <span>Continue Lesson</span>
+                  <span>{isNextLessonCompleted ? 'Review Lesson' : 'Start Next Lesson'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -671,84 +734,67 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </button>
             </div>
 
-            {/* Badges Grid: Row 1 Unlocked (Colorful) & Row 2 Locked (Gray) */}
-            <div className="grid grid-cols-4 gap-2.5">
-              {/* Badge 1: First Lesson (Red/Coral Hexagon) */}
-              <div className="flex flex-col items-center text-center">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-500 to-[#E96746] text-white flex items-center justify-center shadow-xs">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <span className={`text-[10px] font-bold mt-1.5 leading-tight line-clamp-2 ${primaryText}`}>
-                  First Lesson Completed
-                </span>
-              </div>
+            {/* Dynamic Badges Grid Connected to Profile Achievements */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {userProfile.achievements.map((ach) => {
+                const getAchievementIcon = () => {
+                  switch (ach.icon) {
+                    case 'BookOpen':
+                      return <BookOpen className="w-5 h-5" />;
+                    case 'Flame':
+                      return <Flame className="w-5 h-5 fill-current" />;
+                    case 'Award':
+                      return <Award className="w-5 h-5" />;
+                    case 'Target':
+                      return <Target className="w-5 h-5" />;
+                    case 'Brain':
+                      return <Brain className="w-5 h-5" />;
+                    case 'Crown':
+                      return <Crown className="w-5 h-5" />;
+                    default:
+                      return <Sparkles className="w-5 h-5" />;
+                  }
+                };
 
-              {/* Badge 2: 3 Day Streak (Orange/Amber Hexagon) */}
-              <div className="flex flex-col items-center text-center">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white flex items-center justify-center shadow-xs">
-                  <Flame className="w-5 h-5 fill-current" />
-                </div>
-                <span className={`text-[10px] font-bold mt-1.5 leading-tight line-clamp-2 ${primaryText}`}>
-                  3 Day Streak
-                </span>
-              </div>
-
-              {/* Badge 3: Quiz Master (Purple Hexagon) */}
-              <div className="flex flex-col items-center text-center">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <Target className="w-5 h-5" />
-                </div>
-                <span className={`text-[10px] font-bold mt-1.5 leading-tight line-clamp-2 ${primaryText}`}>
-                  Quiz Master (80%+)
-                </span>
-              </div>
-
-              {/* Badge 4: Concept Explorer (Indigo Hexagon) */}
-              <div className="flex flex-col items-center text-center">
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-700 text-white flex items-center justify-center shadow-xs">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <span className={`text-[10px] font-bold mt-1.5 leading-tight line-clamp-2 ${primaryText}`}>
-                  Concept Explorer
-                </span>
-              </div>
-
-              {/* Row 2: Locked Badges (Gray with Lock) */}
-              <div className="flex flex-col items-center text-center mt-2 opacity-65">
-                <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <span className={`text-[10px] font-semibold mt-1.5 leading-tight line-clamp-2 ${secondaryText}`}>
-                  Wall Street Analyst
-                </span>
-              </div>
-
-              <div className="flex flex-col items-center text-center mt-2 opacity-65">
-                <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <span className={`text-[10px] font-semibold mt-1.5 leading-tight line-clamp-2 ${secondaryText}`}>
-                  Perfect Week (7 Days)
-                </span>
-              </div>
-
-              <div className="flex flex-col items-center text-center mt-2 opacity-65">
-                <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <span className={`text-[10px] font-semibold mt-1.5 leading-tight line-clamp-2 ${secondaryText}`}>
-                  Finance Pro (Level 5)
-                </span>
-              </div>
-
-              <div className="flex flex-col items-center text-center mt-2 opacity-65">
-                <div className="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                  <Lock className="w-4 h-4" />
-                </div>
-                <span className={`text-[10px] font-semibold mt-1.5 leading-tight line-clamp-2 ${secondaryText}`}>
-                  Elite Scholar (Level 10)
-                </span>
-              </div>
+                return (
+                  <div
+                    key={ach.id}
+                    className={`flex flex-col items-center text-center p-2.5 rounded-2xl border transition-all ${
+                      ach.isUnlocked
+                        ? isDarkMode
+                          ? 'bg-[#132238] border-[#F07856]/40 shadow-2xs'
+                          : 'bg-[#FFF8ED] border-[#FCE5DC] shadow-2xs'
+                        : isDarkMode
+                        ? 'bg-[#0B192C] border-[#1E3A5F] opacity-50'
+                        : 'bg-slate-50 border-slate-200 opacity-55'
+                    }`}
+                  >
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs transition-transform ${
+                        ach.isUnlocked
+                          ? 'bg-gradient-to-br from-amber-400 to-[#E96746] text-white'
+                          : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
+                      }`}
+                    >
+                      {ach.isUnlocked ? getAchievementIcon() : <Lock className="w-4 h-4" />}
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold mt-1.5 leading-tight line-clamp-1 ${primaryText}`}
+                    >
+                      {ach.title}
+                    </span>
+                    <span
+                      className={`text-[9px] leading-tight mt-0.5 line-clamp-1 ${
+                        ach.isUnlocked
+                          ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                          : secondaryText
+                      }`}
+                    >
+                      {ach.isUnlocked ? 'Unlocked' : ach.description}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
@@ -930,7 +976,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               onClick={() => {
                 if (onStartQuiz) {
-                  onStartQuiz(featuredLesson);
+                  onStartQuiz(nextAvailableLesson);
                 } else {
                   onOpenPractice();
                 }

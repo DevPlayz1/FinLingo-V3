@@ -13,17 +13,19 @@ import {
   BookOpen,
   AlertCircle
 } from 'lucide-react';
-import { QuizQuestion, Lesson } from '../types';
+import { QuizQuestion, Lesson, UserProfile } from '../types';
 import { XP_REWARDS } from '../services/gamification';
 import { getEnhancedExplanation } from '../services/explanationHelper';
 
 interface QuizModalProps {
   lesson: Lesson | null;
   questions: QuizQuestion[];
+  userProfile?: UserProfile;
   isOpen: boolean;
   onClose: () => void;
   onQuizComplete: (
     results: {
+      lessonId?: string;
       totalAnswered: number;
       correctCount: number;
       earnedXp: number;
@@ -38,6 +40,7 @@ interface QuizModalProps {
 export const QuizModal: React.FC<QuizModalProps> = ({
   lesson,
   questions,
+  userProfile,
   isOpen,
   onClose,
   onQuizComplete,
@@ -58,6 +61,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   // Timer tracking
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [isXpAwarded, setIsXpAwarded] = useState(false);
+  const [sessionAwardedXp, setSessionAwardedXp] = useState<number>(0);
+  const [isRepeatAttempt, setIsRepeatAttempt] = useState<boolean>(false);
 
   // Initialize questions session on open
   useEffect(() => {
@@ -69,6 +74,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setCorrectCount(0);
       setWrongQuestions([]);
       setIsXpAwarded(false);
+      setSessionAwardedXp(0);
+      setIsRepeatAttempt(false);
       setElapsedSeconds(0);
       setActiveSessionLength(Math.min(5, questions.length));
     }
@@ -137,7 +144,20 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         const bonus = isPerfect ? XP_REWARDS.PERFECT_QUIZ_BONUS : 0;
         const totalEarnedXp = baseEarned + bonus;
 
+        const previousRecord =
+          lesson?.id && userProfile?.lessonQuizRecords
+            ? userProfile.lessonQuizRecords[lesson.id]
+            : undefined;
+        const previousBestXp = previousRecord ? previousRecord.bestEarnedXp : 0;
+        const actualAwarded = previousRecord
+          ? Math.max(0, totalEarnedXp - previousBestXp)
+          : totalEarnedXp;
+
+        setSessionAwardedXp(actualAwarded);
+        setIsRepeatAttempt(Boolean(previousRecord));
+
         onQuizComplete({
+          lessonId: lesson?.id,
           totalAnswered: sessionQuestions.length,
           correctCount: finalCorrect,
           earnedXp: totalEarnedXp,
@@ -156,6 +176,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     setCorrectCount(0);
     setWrongQuestions([]);
     setIsXpAwarded(false);
+    setSessionAwardedXp(0);
+    setIsRepeatAttempt(false);
     setElapsedSeconds(0);
   };
 
@@ -228,6 +250,32 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   Evaluate your conceptual mastery through active retrieval questions. Missed items will automatically be queued for spaced repetition practice.
                 </p>
               </div>
+
+              {/* Previous Attempt Performance Card if retaking */}
+              {lesson?.id && userProfile?.lessonQuizRecords?.[lesson.id] && (
+                <div
+                  className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                    isDarkMode
+                      ? 'bg-[#132238] border-[#1E3A5F] text-[#E8F0F8]'
+                      : 'bg-[#E8F0F8] border-[#173B63]/20 text-[#173B63]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+                    <div>
+                      <span className="font-extrabold block sm:inline">
+                        Previous Best: {userProfile.lessonQuizRecords[lesson.id].bestScore}/{userProfile.lessonQuizRecords[lesson.id].totalQuestions} Correct
+                      </span>
+                      <span className="opacity-80 sm:ml-1.5 block sm:inline">
+                        ({userProfile.lessonQuizRecords[lesson.id].bestEarnedXp} XP claimed)
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 self-start sm:self-auto">
+                    Retake for Mastery
+                  </span>
+                </div>
+              )}
 
               {/* Quiz Parameters */}
               <div className="grid grid-cols-3 gap-3 text-center">
@@ -704,13 +752,33 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   isDarkMode ? 'bg-[#132238] border-[#F07856]/40' : 'bg-white border-[#FCE5DC]'
                 }`}
               >
-                <span className="text-xs text-[#F07856] font-bold block">XP Earned</span>
+                <span className="text-xs text-[#F07856] font-bold block">XP Awarded</span>
                 <span className="text-xl sm:text-2xl font-extrabold text-[#F07856] flex items-center justify-center gap-1">
                   <Sparkles className="w-4 h-4" />
-                  +{correctCount * XP_REWARDS.QUIZ_CORRECT_ANSWER + (correctCount === sessionQuestions.length ? XP_REWARDS.PERFECT_QUIZ_BONUS : 0)}
+                  +{sessionAwardedXp}
                 </span>
+                {isRepeatAttempt && (
+                  <span className="text-[10px] font-medium block mt-0.5 opacity-80">
+                    {sessionAwardedXp > 0 ? '(Improvement Bonus)' : '(Practice Mode: 0 XP)'}
+                  </span>
+                )}
               </div>
             </div>
+
+            {/* Repeat Attempt Scoring Policy Notification */}
+            {isRepeatAttempt && sessionAwardedXp === 0 && (
+              <div
+                className={`p-3.5 rounded-2xl border max-w-lg mx-auto text-xs leading-relaxed text-center ${
+                  isDarkMode
+                    ? 'bg-[#132238]/60 border-[#1E3A5F] text-[#E8F0F8]/80'
+                    : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238]/80'
+                }`}
+              >
+                <span>
+                  💡 <strong>Scoring Policy:</strong> You previously achieved maximum XP on this quiz. Retakes allow unlimited mastery practice, and bonus XP is awarded whenever you improve your previous high score!
+                </span>
+              </div>
+            )}
 
             {/* Topics to Strengthen (if any wrong) */}
             {topicsNeedingReview.length > 0 ? (

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   GraduationCap,
   Award,
@@ -68,6 +68,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [university, setUniversity] = useState(userProfile.university);
   const [major, setMajor] = useState(userProfile.major);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // Sync inputs whenever active profile changes (e.g. switching demo roles)
+  useEffect(() => {
+    setDisplayName(userProfile.displayName);
+    setUniversity(userProfile.university);
+    setMajor(userProfile.major);
+  }, [userProfile.displayName, userProfile.university, userProfile.major, userProfile.uid]);
 
   // Photo Upload & Preview State
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1225,27 +1232,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Restore Sample Data</span>
+              <span>
+                {currentRole === 'admin'
+                  ? 'Restore Admin Profile Defaults'
+                  : 'Restore Scholar Progress Defaults'}
+              </span>
             </button>
           </div>
         </div>
 
         {showResetConfirm && (
-          <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/30 flex items-center justify-between gap-3 text-xs text-[#7F1D1D]">
-            <span>Restore all XP, streaks, completed lessons, and rankings to the original sample dataset?</span>
-            <div className="flex items-center gap-2 shrink-0">
+          <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#7F1D1D]">
+            <span>
+              {currentRole === 'admin'
+                ? 'Restore Admin profile and administrative settings to defaults? (Student Scholar learning progress, XP, and streaks will NOT be affected).'
+                : 'Restore your student profile, XP, quiz records, and streaks to defaults? (Admin curriculum settings will NOT be affected).'}
+            </span>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
               <button
                 onClick={() => {
                   onResetData();
                   setShowResetConfirm(false);
                 }}
-                className="px-3 py-1 bg-[#DC2626] text-white rounded-lg font-bold"
+                className="px-3 py-1 bg-[#DC2626] text-white rounded-lg font-bold hover:bg-[#B91C1C]"
               >
                 Yes, Reset
               </button>
               <button
                 onClick={() => setShowResetConfirm(false)}
-                className="px-2 py-1 text-[#263238]/70 font-semibold"
+                className="px-2 py-1 text-[#263238]/70 font-semibold hover:underline"
               >
                 Cancel
               </button>

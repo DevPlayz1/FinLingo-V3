@@ -33,7 +33,7 @@ import {
   ConsentRecord,
   UserRole
 } from './types';
-import { Sparkles, CheckCircle2, Flame, Moon, Sun, Shield, Scale, FileText, Cookie, Mail, Lock } from 'lucide-react';
+import { Sparkles, CheckCircle2, Flame, Moon, Sun, Shield, Scale, FileText, Cookie, Mail, Lock, Info } from 'lucide-react';
 
 export default function App() {
   // Theme state: dark / light mode
@@ -113,10 +113,10 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<{
     title: string;
     xp?: number;
-    icon?: 'xp' | 'success' | 'streak';
+    icon?: 'xp' | 'success' | 'streak' | 'info';
   } | null>(null);
 
-  const showToast = (title: string, xp?: number, icon: 'xp' | 'success' | 'streak' = 'xp') => {
+  const showToast = (title: string, xp?: number, icon: 'xp' | 'success' | 'streak' | 'info' = 'xp') => {
     setToastMessage({ title, xp, icon });
     setTimeout(() => {
       setToastMessage(null);
@@ -142,9 +142,11 @@ export default function App() {
       setActiveTab('dashboard');
     }
     showToast(
-      role === 'admin' ? 'Switched to Academic Admin Role' : 'Switched to College Scholar Role',
+      role === 'admin'
+        ? 'Switched to Academic Admin Profile (Prof. Eleanor Vance)'
+        : 'Switched to College Scholar Profile (Student Scholar)',
       undefined,
-      'success'
+      'streak'
     );
   };
 
@@ -167,10 +169,29 @@ export default function App() {
   };
 
   const handleCompleteLesson = (lessonId: string, xpValue: number) => {
-    const updated = dataService.completeLesson(lessonId, xpValue);
-    setUserProfile(updated);
+    const result = dataService.completeLesson(lessonId, xpValue);
+    setUserProfile(result.profile);
     refreshState();
-    showToast('Lesson Mastered!', xpValue, 'success');
+
+    if (result.isNewlyCompleted) {
+      showToast('Lesson Mastered!', result.awardedXp, 'success');
+    } else {
+      showToast('Lesson Reviewed (Already Mastered)', undefined, 'info');
+    }
+
+    if (result.leveledUp) {
+      setTimeout(() => {
+        showToast(`Career Promotion: Level ${result.newLevel} - ${result.newLevelTitle}!`, undefined, 'xp');
+      }, 700);
+    }
+
+    if (result.newAchievements && result.newAchievements.length > 0) {
+      result.newAchievements.forEach((ach, idx) => {
+        setTimeout(() => {
+          showToast(`Achievement Unlocked: ${ach.title}!`, undefined, 'success');
+        }, 1200 + idx * 500);
+      });
+    }
   };
 
   const handleToggleBookmark = (lessonId: string) => {
@@ -196,14 +217,16 @@ export default function App() {
   };
 
   const handleQuizComplete = (results: {
+    lessonId?: string;
     totalAnswered: number;
     correctCount: number;
     earnedXp: number;
     isPerfect: boolean;
     wrongQuestions: QuizQuestion[];
   }) => {
-    // Record into user profile
-    dataService.recordQuizResults(
+    // Record into user profile using progression scoring engine
+    const quizResult = dataService.recordQuizResults(
+      results.lessonId,
       results.totalAnswered,
       results.correctCount,
       results.earnedXp,
@@ -215,24 +238,51 @@ export default function App() {
       dataService.enqueueSpacedRepetition(wrongQ);
     });
 
+    setUserProfile(quizResult.profile);
     refreshState();
-    showToast(
-      results.isPerfect ? 'Flawless Quiz Assessment!' : 'Quiz Session Complete!',
-      results.earnedXp,
-      'xp'
-    );
+
+    if (quizResult.awardedXp > 0) {
+      const msg = results.isPerfect
+        ? 'Flawless Quiz Assessment!'
+        : quizResult.isImprovement
+        ? 'Quiz Score Improved!'
+        : 'Quiz Session Complete!';
+      showToast(msg, quizResult.awardedXp, 'xp');
+    } else {
+      showToast('Practice Session Complete! (Max XP already achieved)', undefined, 'info');
+    }
+
+    if (quizResult.leveledUp) {
+      setTimeout(() => {
+        showToast(`Career Promotion: Level ${quizResult.newLevel} - ${quizResult.newLevelTitle}!`, undefined, 'xp');
+      }, 700);
+    }
+
+    if (quizResult.newAchievements && quizResult.newAchievements.length > 0) {
+      quizResult.newAchievements.forEach((ach, idx) => {
+        setTimeout(() => {
+          showToast(`Achievement Unlocked: ${ach.title}!`, undefined, 'success');
+        }, 1200 + idx * 500);
+      });
+    }
   };
 
   // Spaced Repetition actions
   const handleAdvanceSpacedItem = (itemId: string, correct: boolean) => {
     const result = dataService.advanceSpacedRepetition(itemId, correct);
     if (result && correct) {
-      dataService.addXp(20);
       showToast(
         result.isMastered ? 'Concept Mastered!' : 'Memory Interval Advanced!',
-        20,
+        result.awardedXp,
         'xp'
       );
+      if (result.newAchievements && result.newAchievements.length > 0) {
+        result.newAchievements.forEach((ach, idx) => {
+          setTimeout(() => {
+            showToast(`Achievement Unlocked: ${ach.title}!`, undefined, 'success');
+          }, 800 + idx * 500);
+        });
+      }
     }
     refreshState();
   };
@@ -251,10 +301,19 @@ export default function App() {
     showToast('Profile Saved', undefined, 'success');
   };
 
-  const handleResetData = () => {
-    dataService.restoreDefaultData();
+  const handleResetData = (target?: 'user' | 'admin' | 'all') => {
+    const roleTarget = target ?? currentRole;
+    dataService.restoreDefaultData(roleTarget);
     refreshState();
-    showToast('Original Sample Data Restored', undefined, 'success');
+    showToast(
+      roleTarget === 'admin'
+        ? 'Admin Profile & Settings Restored to Defaults'
+        : roleTarget === 'user'
+        ? 'Student Scholar Progress Restored to Defaults'
+        : 'All Sample Data Restored to Defaults',
+      undefined,
+      'success'
+    );
   };
 
   return (
@@ -284,6 +343,7 @@ export default function App() {
             userProfile={userProfile}
             tracks={tracks}
             lessons={lessons}
+            currentRole={currentRole}
             spacedRepetitionDueCount={spacedDeck.length}
             leaderboard={leaderboard}
             onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
@@ -588,6 +648,7 @@ export default function App() {
         onCompleteLesson={handleCompleteLesson}
         onToggleBookmark={handleToggleBookmark}
         onStartQuiz={handleStartQuiz}
+        isDarkMode={isDarkMode}
       />
 
       {/* Quiz Modal */}
@@ -595,10 +656,12 @@ export default function App() {
         <QuizModal
           lesson={activeQuizModal.lesson}
           questions={activeQuizModal.questions}
+          userProfile={userProfile}
           isOpen={Boolean(activeQuizModal)}
           onClose={() => setActiveQuizModal(null)}
           onQuizComplete={handleQuizComplete}
           onNavigateToPractice={() => setActiveTab('practice')}
+          isDarkMode={isDarkMode}
         />
       )}
 
@@ -672,6 +735,10 @@ export default function App() {
             ) : toastMessage.icon === 'streak' ? (
               <div className="w-8 h-8 rounded-xl bg-[#F07856] text-white flex items-center justify-center">
                 <Flame className="w-4 h-4 fill-current" />
+              </div>
+            ) : toastMessage.icon === 'info' ? (
+              <div className="w-8 h-8 rounded-xl bg-blue-500 text-white flex items-center justify-center">
+                <Info className="w-4 h-4" />
               </div>
             ) : (
               <div className="w-8 h-8 rounded-xl bg-[#16A34A] text-white flex items-center justify-center">
