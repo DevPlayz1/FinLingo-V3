@@ -29,6 +29,7 @@ import {
 import { LegalDocId, UserProfile } from '../types';
 import { LEGAL_DOCUMENTS, LegalDocument } from '../data/legalPolicies';
 import { dataService } from '../services/dataService';
+import { printOrSaveLegalDocument } from '../utils/printPdfHelper';
 
 interface LegalCenterModalProps {
   isOpen: boolean;
@@ -154,9 +155,10 @@ export const LegalCenterModal: React.FC<LegalCenterModalProps> = ({
     );
   };
 
-  // Handler for printing current document
+  // Handler for printing current document or saving as PDF
   const handlePrintDocument = () => {
-    window.print();
+    const result = printOrSaveLegalDocument(currentDoc);
+    triggerToast(result.message);
   };
 
   const handleSubmitGrievance = (e: React.FormEvent) => {

@@ -504,6 +504,108 @@ export const LESSONS: Lesson[] = [
 
 export const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
+    id: 'q-acc-6-001',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'During a period of consistently rising prices (inflation), which inventory costing method produces the highest reported Net Income?',
+    options: [
+      'FIFO (First-In, First-Out)',
+      'LIFO (Last-In, First-Out)',
+      'Weighted Average Cost',
+      'Specific Identification'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'Under FIFO, older and lower costs are matched against current revenues in Cost of Goods Sold (COGS). Lower COGS produces higher Gross Profit and higher reported Net Income.',
+    difficulty: 'intermediate',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
+    id: 'q-acc-6-002',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'Why do US companies often adopt LIFO during inflationary periods despite reporting lower accounting earnings?',
+    options: [
+      'LIFO reports higher Cost of Goods Sold, lowering taxable income and conserving cash on tax payments',
+      'LIFO is mandated by international IFRS accounting standards',
+      'LIFO maximizes balance sheet ending inventory asset valuation',
+      'LIFO avoids the requirement to track physical inventory movements'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'Under the IRS LIFO Conformity Rule, using LIFO yields higher COGS during inflation, reducing taxable income and actual cash paid for corporate taxes.',
+    difficulty: 'intermediate',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
+    id: 'q-acc-6-003',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'Which major accounting framework strictly prohibits the use of LIFO for inventory valuation?',
+    options: [
+      'IFRS (International Financial Reporting Standards)',
+      'US GAAP (Generally Accepted Accounting Principles)',
+      'Both US GAAP and IFRS permit LIFO equally',
+      'Neither permits LIFO without SEC special exemptions'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'IAS 2 under IFRS explicitly prohibits LIFO because it leaves ending inventory on the balance sheet measured at outdated historical costs that lack fair-value relevance.',
+    difficulty: 'beginner',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
+    id: 'q-acc-6-004',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'What financial metric represents the cumulative difference between inventory valued under FIFO versus LIFO?',
+    options: [
+      'LIFO Reserve (FIFO Inventory − LIFO Inventory)',
+      'Inventory Turnover Ratio',
+      'Days Sales of Inventory (DSI)',
+      'Contra-Asset Amortization Allowance'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'LIFO Reserve is a required financial footnote disclosure: LIFO Reserve = FIFO Inventory Value − LIFO Inventory Value. It allows financial analysts to adjust LIFO statements for direct peer comparisons.',
+    difficulty: 'advanced',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
+    id: 'q-acc-6-005',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'A company reports Beginning Inventory of $50,000, Purchases of $200,000, and Ending Inventory of $70,000. What is the Cost of Goods Sold (COGS)?',
+    options: [
+      '$180,000',
+      '$220,000',
+      '$250,000',
+      '$130,000'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'Using the fundamental inventory formula: COGS = Beginning Inventory ($50,000) + Purchases ($200,000) − Ending Inventory ($70,000) = $180,000.',
+    difficulty: 'intermediate',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
+    id: 'q-acc-6-006',
+    lessonId: 'acc-6',
+    trackId: 'accounting',
+    prompt: 'During prolonged periods of declining prices (deflation), what is the expected relationship between LIFO and FIFO?',
+    options: [
+      'LIFO will report lower COGS and higher Net Income than FIFO',
+      'FIFO will report lower COGS and higher Net Income than LIFO',
+      'Both methods report identical COGS and tax liabilities',
+      'LIFO cannot be legally calculated during deflationary quarters'
+    ],
+    correctOptionIndex: 0,
+    explanation: 'In a deflationary environment, newer inventory costs are lower than older costs. Because LIFO charges the newest (cheaper) costs to COGS, COGS is lower and Net Income is higher.',
+    difficulty: 'advanced',
+    xpPoints: 20,
+    topicTag: 'Inventory Costing: FIFO vs. LIFO'
+  },
+  {
     id: 'q-bank-accounting-001',
     lessonId: 'acc-2',
     trackId: 'accounting',

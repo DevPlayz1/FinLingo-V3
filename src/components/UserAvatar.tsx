@@ -38,7 +38,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   size = 'md',
   className = '',
   ring = true,
-  ringClassName = 'ring-2 ring-[#F07856]/40',
+  ringClassName = 'ring-2 ring-[#E96746]/40',
   levelBadge,
   alt,
   onClick
@@ -94,7 +94,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
       {levelBadge !== undefined && (
         <div
-          className={`absolute rounded-full bg-[#F07856] text-white flex items-center justify-center font-black shadow-md border-2 border-white dark:border-[#132238] ${
+          className={`absolute rounded-full bg-[#E96746] text-white flex items-center justify-center font-black shadow-md border-2 border-white dark:border-[#12233A] ${
             badgeSizeClasses[size] || badgeSizeClasses.md
           }`}
           title={`Level ${levelBadge}`}

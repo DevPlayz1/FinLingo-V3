@@ -141,9 +141,14 @@ export default function App() {
 
   // Quiz actions
   const handleStartQuiz = (lesson: Lesson) => {
-    const questions = dataService.getQuestionsByLesson(lesson.id);
-    if (questions.length > 0) {
+    let questions = dataService.getQuestionsByLesson(lesson.id);
+    if (!questions || questions.length === 0) {
+      questions = dataService.getQuestionsByTrack(lesson.trackId);
+    }
+    if (questions && questions.length > 0) {
       setActiveQuizModal({ lesson, questions });
+    } else {
+      showToast('Practice quiz loaded', undefined, 'xp');
     }
   };
 
@@ -211,8 +216,8 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen font-sans flex flex-col selection:bg-[#F07856] selection:text-white transition-colors duration-200 ${
-        isDarkMode ? 'bg-[#0B192C] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
+      className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
+        isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
       }`}
     >
       {/* Top Navigation with Dark Mode & Standalone Tab Sync */}
@@ -238,6 +243,7 @@ export default function App() {
             leaderboard={leaderboard}
             onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
             onOpenLesson={handleOpenLesson}
+            onStartQuiz={handleStartQuiz}
             setActiveTab={setActiveTab}
             onOpenPractice={() => setActiveTab('practice')}
             isDarkMode={isDarkMode}

@@ -27,6 +27,7 @@ import {
 import { LegalDocId, UserProfile } from '../types';
 import { LEGAL_DOCUMENTS, LegalDocument } from '../data/legalPolicies';
 import { dataService } from '../services/dataService';
+import { printOrSaveLegalDocument } from '../utils/printPdfHelper';
 
 interface LegalViewProps {
   userProfile: UserProfile;
@@ -194,7 +195,10 @@ export const LegalView: React.FC<LegalViewProps> = ({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                const result = printOrSaveLegalDocument(currentDoc);
+                triggerToast(result.message);
+              }}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold border flex items-center gap-2 transition cursor-pointer ${
                 isDarkMode
                   ? 'bg-[#1E3A5F] hover:bg-[#1E3A5F]/80 text-[#FFF8ED] border-[#1E3A5F]'

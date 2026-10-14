@@ -55,27 +55,33 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header
       className={`sticky top-0 z-40 backdrop-blur-md border-b transition-colors ${
         isDarkMode
-          ? 'bg-[#0B192C]/95 border-[#1E3A5F] shadow-sm'
-          : 'bg-white/95 border-[#E8F0F8] shadow-xs'
+          ? 'bg-[#0B1728]/95 border-[#1E324F] shadow-xs'
+          : 'bg-[#FFFFFF]/95 border-[#EDE3D2] shadow-xs'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand Logo & College Edition Sync */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className="flex items-center gap-2.5 group text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] rounded-xl p-1 -ml-1 transition"
+              className="flex items-center gap-2.5 group text-left focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] rounded-xl p-1 -ml-1 transition cursor-pointer"
               title="Return to Dashboard"
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#173B63] dark:bg-[#132238] flex items-center justify-center text-white shadow-sm shadow-[#173B63]/20 border border-[#F07856]/30 group-hover:scale-105 transition-transform">
-                <Sparkles className="w-5 h-5 text-[#F07856]" />
+              <div
+                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-xs border group-hover:scale-105 transition-transform ${
+                  isDarkMode
+                    ? 'bg-[#12233A] border-[#1E324F]'
+                    : 'bg-[#FDECE7] border-[#E96746]/25'
+                }`}
+              >
+                <Sparkles className="w-5 h-5 text-[#E96746] dark:text-[#F07856]" />
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
                   <span
                     className={`font-black text-xl tracking-tight transition-colors ${
-                      isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+                      isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
                     }`}
                   >
                     FinLingo
@@ -83,27 +89,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <p
                   className={`text-[11px] hidden sm:block -mt-0.5 font-medium transition-colors ${
-                    isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
+                    isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                   }`}
                 >
-                  Commerce &amp; Finance Mastery
+                  Gamified Commerce Academy
                 </p>
               </div>
             </button>
 
-            {/* Standalone "College Edu" Tab Pill - fully synced with curriculum tracks tab */}
+            {/* Standalone "College Edu" Tab */}
             <button
               onClick={() => setActiveTab('tracks')}
-              className={`hidden sm:inline-flex items-center gap-1 text-[11px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
+              className={`hidden sm:inline-flex items-center gap-1 text-[11px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] ${
                 activeTab === 'tracks'
-                  ? 'bg-[#F07856] text-white border-[#F07856] shadow-xs'
+                  ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] dark:border-[#F07856] shadow-xs'
                   : isDarkMode
-                  ? 'bg-[#1E3A5F] text-[#FFF8ED] border-[#1E3A5F] hover:border-[#F07856]/50'
-                  : 'bg-[#FCE5DC] text-[#F07856] border-[#F07856]/30 hover:bg-[#F07856] hover:text-white'
+                  ? 'bg-[#12233A] text-[#C1CDDC] border-[#1E324F] hover:text-[#FFF8ED] hover:border-[#F07856]/50'
+                  : 'bg-[#FDECE7] text-[#E96746] border-[#E96746]/30 hover:bg-[#E96746] hover:text-white'
               }`}
               title="Collegiate Curriculum Tracks (Accounting, Economics, Finance)"
             >
-              <GraduationCap className="w-3 h-3" />
+              <GraduationCap className="w-3.5 h-3.5" />
               <span>College Edu</span>
             </button>
           </div>
@@ -112,8 +118,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav
             className={`hidden md:flex items-center gap-1 p-1 rounded-xl border transition-colors ${
               isDarkMode
-                ? 'bg-[#132238] border-[#1E3A5F]'
-                : 'bg-[#E8F0F8]/80 border-[#E8F0F8]'
+                ? 'bg-[#12233A] border-[#1E324F]'
+                : 'bg-[#FFF8ED] border-[#EDE3D2]'
             }`}
             aria-label="Main Navigation"
           >
@@ -123,14 +129,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
+                  className={`relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
                     isActive
-                      ? isDarkMode
-                        ? 'bg-[#F07856] text-white shadow-sm shadow-[#F07856]/30 font-bold'
-                        : 'bg-[#173B63] text-white shadow-sm shadow-[#173B63]/25 font-bold'
+                      ? 'bg-[#E96746] dark:bg-[#F07856] text-white shadow-xs font-bold'
                       : isDarkMode
-                      ? 'text-[#E8F0F8] hover:text-[#FFF8ED] hover:bg-[#1E3A5F]'
-                      : 'text-[#173B63] hover:text-[#173B63] hover:bg-white/80'
+                      ? 'text-[#C1CDDC] hover:text-[#FFF8ED] hover:bg-[#1E324F]'
+                      : 'text-[#263238] hover:text-[#E96746] hover:bg-[#FFFFFF]'
                   }`}
                 >
                   {item.icon}
@@ -139,10 +143,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span
                       className={`text-xs px-1.5 py-0.2 rounded-full font-bold leading-tight ${
                         isActive
-                          ? isDarkMode
-                            ? 'bg-[#173B63] text-[#FFF8ED]'
-                            : 'bg-[#F07856] text-white'
-                          : 'bg-[#F07856] text-white animate-pulse'
+                          ? 'bg-[#0B1728] text-white'
+                          : 'bg-[#E96746] dark:bg-[#F07856] text-white animate-pulse'
                       }`}
                     >
                       {item.badge}
@@ -158,10 +160,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Global Dark / Light Mode Switcher */}
             <button
               onClick={onToggleDarkMode}
-              className={`p-2 rounded-xl border transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] flex items-center justify-center ${
+              className={`p-2 rounded-xl border transition-all cursor-pointer focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] flex items-center justify-center ${
                 isDarkMode
-                  ? 'bg-[#132238] border-[#1E3A5F] text-[#F07856] hover:bg-[#1E3A5F]'
-                  : 'bg-[#FFF8ED] border-[#E8F0F8] text-[#173B63] hover:bg-[#E8F0F8]'
+                  ? 'bg-[#12233A] border-[#1E324F] text-[#F07856] hover:bg-[#1E324F]'
+                  : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238] hover:bg-[#FFFFFF]'
               }`}
               title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               aria-label={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
@@ -169,7 +171,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {isDarkMode ? (
                 <Sun className="w-4 h-4 text-[#F07856]" />
               ) : (
-                <Moon className="w-4 h-4 text-[#173B63]" />
+                <Moon className="w-4 h-4 text-[#263238]" />
               )}
             </button>
 
@@ -177,39 +179,41 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold shadow-2xs transition-colors ${
                 isDarkMode
-                  ? 'bg-[#132238] border-[#1E3A5F] text-[#FFF8ED]'
-                  : 'bg-[#FCE5DC] border-[#F07856]/30 text-[#263238]'
+                  ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]'
+                  : 'bg-[#FDECE7] border-[#E96746]/25 text-[#263238]'
               }`}
               title={`${userProfile.streakDays}-day active learning streak`}
             >
-              <Flame className="w-4 h-4 text-[#F07856] fill-[#F07856]" />
-              <span className={isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'}>
+              <Flame className="w-4 h-4 text-[#E96746] dark:text-[#F07856] fill-current" />
+              <span className={isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'}>
                 {userProfile.streakDays}
               </span>
-              <span className="hidden sm:inline font-semibold text-[#F07856] text-xs">d</span>
+              <span className="hidden sm:inline font-semibold text-[#E96746] dark:text-[#F07856] text-xs">d</span>
             </div>
 
             {/* Total XP Badge */}
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold shadow-2xs transition-colors ${
                 isDarkMode
-                  ? 'bg-[#132238] border-[#1E3A5F] text-[#FFF8ED]'
-                  : 'bg-[#E8F0F8] border-[#173B63]/20 text-[#173B63]'
+                  ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]'
+                  : 'bg-[#FFFFFF] border-[#EDE3D2] text-[#263238]'
               }`}
               title={`${userProfile.currentXp} Total XP earned`}
             >
-              <Award className="w-4 h-4 text-[#F07856]" />
-              <span>{userProfile.currentXp}</span>
-              <span className="text-[11px] font-bold text-[#F07856]">XP</span>
+              <Award className="w-4 h-4 text-[#E96746] dark:text-[#F07856]" />
+              <span className={isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'}>
+                {userProfile.currentXp}
+              </span>
+              <span className="text-[11px] font-bold text-[#E96746] dark:text-[#F07856]">XP</span>
             </div>
 
             {/* User Level Pill with UserAvatar */}
             <button
               onClick={() => setActiveTab('profile')}
-              className={`hidden lg:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border cursor-pointer transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
+              className={`hidden lg:flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl border cursor-pointer transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] ${
                 isDarkMode
-                  ? 'bg-[#132238] hover:bg-[#1E3A5F] border-[#1E3A5F]'
-                  : 'bg-white hover:bg-[#FFF8ED] border-[#E8F0F8]'
+                  ? 'bg-[#12233A] hover:bg-[#1E324F] border-[#1E324F]'
+                  : 'bg-[#FFFFFF] hover:bg-[#FFF8ED] border-[#EDE3D2]'
               }`}
               title="View student profile and learning statistics"
             >
@@ -222,14 +226,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="text-left leading-tight">
                 <span
                   className={`text-[11px] font-extrabold block ${
-                    isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+                    isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
                   }`}
                 >
                   Lvl {userProfile.level}
                 </span>
                 <span
                   className={`text-[10px] block truncate max-w-[90px] ${
-                    isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
+                    isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                   }`}
                 >
                   {userProfile.levelTitle}
@@ -240,32 +244,32 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Architecture Details Modal Button */}
             <button
               onClick={onOpenFirebaseModal}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
                 isDarkMode
-                  ? 'bg-[#132238] text-[#E8F0F8] border-[#1E3A5F] hover:bg-[#1E3A5F]'
-                  : 'bg-[#E8F0F8] text-[#173B63] border-[#173B63]/20 hover:bg-[#173B63] hover:text-white'
+                  ? 'bg-[#12233A] text-[#C1CDDC] border-[#1E324F] hover:bg-[#1E324F] hover:text-[#FFF8ED]'
+                  : 'bg-[#FFFFFF] text-[#52647A] border-[#EDE3D2] hover:bg-[#FFF8ED] hover:text-[#263238]'
               }`}
               title="Architecture details: Designed for Firebase Auth & Cloud Firestore"
             >
-              <Database className="w-3.5 h-3.5 text-[#F07856]" />
-              <span className="hidden sm:inline">Backend Schema</span>
+              <Database className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
+              <span className="hidden sm:inline">Backend</span>
             </button>
 
             {/* Legal & Privacy Center Button */}
             {onOpenLegalCenter && (
               <button
                 onClick={onOpenLegalCenter}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
                   activeTab === 'legal'
-                    ? 'bg-[#F07856] text-white border-[#F07856]'
+                    ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] dark:border-[#F07856]'
                     : isDarkMode
-                    ? 'bg-[#132238] text-[#E8F0F8] border-[#1E3A5F] hover:bg-[#1E3A5F]'
-                    : 'bg-[#E8F0F8] text-[#173B63] border-[#173B63]/20 hover:bg-[#173B63] hover:text-white'
+                    ? 'bg-[#12233A] text-[#C1CDDC] border-[#1E324F] hover:bg-[#1E324F] hover:text-[#FFF8ED]'
+                    : 'bg-[#FFFFFF] text-[#52647A] border-[#EDE3D2] hover:bg-[#FFF8ED] hover:text-[#263238]'
                 }`}
-                title="FinLingo Legal & Privacy Center (DPDPA 2023, IT Act, SEBI disclosures)"
+                title="FinLingo Legal & Privacy Center"
               >
-                <Shield className="w-3.5 h-3.5 text-[#F07856]" />
-                <span className="hidden xl:inline">Privacy &amp; Legal</span>
+                <Shield className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
+                <span className="hidden xl:inline">Legal</span>
               </button>
             )}
           </div>
@@ -274,7 +278,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Mobile Sub-Navigation Bar */}
         <div
           className={`md:hidden flex items-center justify-around py-2 border-t transition-colors ${
-            isDarkMode ? 'border-[#1E3A5F] bg-[#0B192C]' : 'border-[#E8F0F8] bg-white'
+            isDarkMode ? 'border-[#1E324F] bg-[#0B1728]' : 'border-[#EDE3D2] bg-[#FFFFFF]'
           }`}
         >
           {navItems.map((item) => {
@@ -283,18 +287,18 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`relative flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-medium focus:outline-hidden ${
+                className={`relative flex flex-col items-center gap-1 py-1 px-2.5 rounded-lg text-xs font-medium focus:outline-hidden cursor-pointer ${
                   isActive
-                    ? 'text-[#F07856] font-bold'
+                    ? 'text-[#E96746] dark:text-[#F07856] font-bold'
                     : isDarkMode
-                    ? 'text-[#E8F0F8]/70 hover:text-[#FFF8ED]'
-                    : 'text-[#263238]/70 hover:text-[#173B63]'
+                    ? 'text-[#C1CDDC] hover:text-[#FFF8ED]'
+                    : 'text-[#52647A] hover:text-[#263238]'
                 }`}
               >
                 <div className="relative">
                   {item.icon}
                   {item.badge !== undefined && (
-                    <span className="absolute -top-1 -right-2 w-4 h-4 rounded-full bg-[#F07856] text-white text-[10px] flex items-center justify-center font-bold">
+                    <span className="absolute -top-1 -right-2 w-4 h-4 rounded-full bg-[#E96746] dark:bg-[#F07856] text-white text-[10px] flex items-center justify-center font-bold">
                       {item.badge}
                     </span>
                   )}
