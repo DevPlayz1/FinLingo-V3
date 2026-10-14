@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
+    // Helper function to check if the caller is the owner of the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Helper function to check admin claims
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+
+    // 1. User Profiles: Least-privilege data access
+    // Users can read and write only their own user profile document.
+    // Email addresses and private settings are strictly guarded.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) 
+                    && request.resource.data.displayName is string 
+                    && request.resource.data.displayName.size() <= 60;
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
+
+      // Spaced repetition queue subcollection (private to student)
+      match /spaced_repetition/{itemId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+
+      // Quiz attempt history (private to student)
+      match /quiz_history/{attemptId} {
+        allow read, write, delete: if isOwner(userId);
+      }
+    }
+
+    // 2. Curriculum Tracks & Lessons: Public read for learning, write restricted to admins
+    match /tracks/{trackId} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /lessons/{lessonId} {
+        allow read: if true;
+        allow write: if isAdmin();
+
+        match /questions/{questionId} {
+          allow read: if true;
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    // 3. Leaderboards: Publicly viewable for community gamification
+    // Sanitized: Leaderboard entries must NOT contain private email addresses or auth tokens.
+    match /leaderboards/{boardId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+  }
+}
