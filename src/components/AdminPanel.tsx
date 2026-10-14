@@ -215,6 +215,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   // 6. Safe Per-Profile Reset handlers
+  const [resetUserProgressModalOpen, setResetUserProgressModalOpen] = useState(false);
+
+  const handleConfirmResetUserProgress = () => {
+    const success = dataService.resetUserProgress(currentRole);
+    if (success) {
+      onRefreshData();
+      setDemoUserXpInput(0);
+      setResetUserProgressModalOpen(false);
+      showToast('Student Scholar Progress Reset: 0 XP, Level 1, 0 Streak', 0, 'success');
+    } else {
+      showToast('Unauthorized: Admin role required to reset user progress', undefined, 'xp');
+    }
+  };
+
   const handleResetAdminOnly = () => {
     dataService.restoreDefaultData('admin');
     onRefreshData();
@@ -314,6 +328,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#E96746] hover:bg-[#D45333] text-white shadow-xs transition cursor-pointer"
           >
             Switch Demo Role
+          </button>
+          <button
+            onClick={() => setResetUserProgressModalOpen(true)}
+            className="px-3.5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition cursor-pointer flex items-center gap-1.5"
+            title="Admin-only: Reset User Progress to 0 XP, Level 1, Streak 0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset User Progress</span>
           </button>
           <button
             onClick={() => setResetModalOpen(true)}
@@ -884,9 +906,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               }`}
             >
               <strong>Security Model Disclaimer:</strong> This RBAC enforcement runs client-side in the
-              React application state and local storage for Phase 2 evaluation. In a full production
-              deployment with Firebase, security is enforced via Firestore Security Rules and custom
-              claims on the user's ID token.
+              React application state and local storage for demo evaluation. In a full production
+              deployment, security is enforced on a trusted server with role-based session verification and strict backend access controls.
             </div>
           </div>
         </div>
@@ -1349,6 +1370,116 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 className="px-4 py-2 rounded-xl text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REQUIREMENT 7: EXPLICIT CONFIRMATION MODAL FOR RESET USER PROGRESS */}
+      {resetUserProgressModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div
+            className={`w-full max-w-lg rounded-3xl p-6 sm:p-8 border shadow-2xl space-y-5 ${
+              isDarkMode
+                ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]'
+                : 'bg-white border-[#EDE3D2] text-[#263238]'
+            }`}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#EDE3D2] dark:border-[#1E324F]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center border border-rose-500/20 shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-rose-500 block">
+                    Admin Action Required
+                  </span>
+                  <h3 className="font-black text-xl">Reset User Progress</h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setResetUserProgressModalOpen(false)}
+                className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs sm:text-sm">
+              <p className="leading-relaxed text-[#52647A] dark:text-[#C1CDDC]">
+                Please review and explicitly confirm the reset of the Student Scholar's learning record.
+              </p>
+
+              {/* Requirement 7 Mandatory Items Checklist */}
+              <div
+                className={`p-4 rounded-2xl border space-y-2.5 ${
+                  isDarkMode ? 'bg-[#0B1728] border-rose-500/30' : 'bg-rose-50/70 border-rose-200'
+                }`}
+              >
+                <div className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                  The following user records will be reset:
+                </div>
+                <ul className="space-y-1.5 text-xs text-rose-800 dark:text-rose-300">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>XP:</strong> Reset to <strong>0</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>Level:</strong> Reset to <strong>Level 1 (Intern Scholar)</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>Streak:</strong> Reset to <strong>0 days</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>Completed Lessons:</strong> Reset to <strong>none (empty)</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>Quiz History &amp; Telemetry:</strong> Reset to <strong>empty initial state</strong></span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span><strong>Earned Achievements:</strong> Reset to <strong>none (all locked)</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Preservation Notice */}
+              <div
+                className={`p-3.5 rounded-xl border text-xs leading-relaxed ${
+                  isDarkMode
+                    ? 'bg-[#1E324F]/40 border-[#1E324F] text-[#C1CDDC]'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Data Preservation Guarantee:</strong> Academic curriculum, 200+ question bank, lesson content, faculty settings, and Admin profile remain completely untouched. No default XP or sample progress will be restored upon page refresh or subsequent logins.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setResetUserProgressModalOpen(false)}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs font-semibold border transition cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmResetUserProgress}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 shadow-md transition cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Confirm: Reset User Progress to 0</span>
               </button>
             </div>
           </div>

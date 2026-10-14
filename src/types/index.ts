@@ -139,7 +139,7 @@ export interface UserProfile {
   currentXp: number;
   nextLevelXp: number;
   streakDays: number;
-  lastActiveDate: string; // YYYY-MM-DD
+  lastActiveDate?: string; // YYYY-MM-DD
   completedLessonIds: string[];
   bookmarkedLessonIds: string[];
   quizStats: {

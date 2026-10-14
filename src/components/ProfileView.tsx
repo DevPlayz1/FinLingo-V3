@@ -26,7 +26,8 @@ import {
   FileText,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  LogOut
 } from 'lucide-react';
 import { UserProfile, LegalDocId, UserRole } from '../types';
 import { calculateLevelProgress } from '../services/gamification';
@@ -37,14 +38,17 @@ import {
   optimizeProfileImage,
   OptimizedImageResult
 } from '../utils/imageValidation';
+import { authService } from '../services/authService';
+import { validatePassword } from '../utils/passwordPolicy';
 
 interface ProfileViewProps {
   userProfile: UserProfile;
   currentRole?: UserRole;
   onOpenRoleSelection?: () => void;
+  onLogout?: () => void;
+  accountEmail?: string;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onResetData: () => void;
-  onOpenFirebaseModal: () => void;
   onOpenLegalCenter: (docId?: LegalDocId) => void;
   onOpenConsentModal?: () => void;
   isDarkMode?: boolean;
@@ -55,9 +59,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   userProfile,
   currentRole,
   onOpenRoleSelection,
+  onLogout,
+  accountEmail,
   onUpdateProfile,
   onResetData,
-  onOpenFirebaseModal,
   onOpenLegalCenter,
   onOpenConsentModal,
   isDarkMode = false,
@@ -68,6 +73,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [university, setUniversity] = useState(userProfile.university);
   const [major, setMajor] = useState(userProfile.major);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // In-app Password Management State
+  const [isPasswordSectionOpen, setIsPasswordSectionOpen] = useState(false);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordChangeStatus, setPasswordChangeStatus] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+
+  const passwordValidation = validatePassword(newPasswordInput);
+  const passwordsMatch = newPasswordInput.length > 0 && newPasswordInput === confirmPasswordInput;
 
   // Sync inputs whenever active profile changes (e.g. switching demo roles)
   useEffect(() => {
@@ -510,6 +530,23 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </span>
                 <span className="uppercase text-[10px] tracking-wider font-extrabold underline">
                   {currentRole === 'admin' ? 'Admin Active' : 'Student Active'}
+                </span>
+              </button>
+            )}
+
+            {/* Account Sign Out Button */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer border-rose-300 dark:border-rose-900/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40`}
+                title="Sign out of your active FinLingo session"
+              >
+                <span className="flex items-center gap-2">
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out of Account</span>
+                </span>
+                <span className="text-[10px] opacity-80 underline">
+                  {accountEmail || 'Sign Out'}
                 </span>
               </button>
             )}
@@ -1193,7 +1230,251 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* System Settings & Firebase Schema Preview Card */}
+      {/* Account Security & Password Management (Requirements 2 & 3) */}
+      <div
+        className={`p-6 rounded-2xl border space-y-4 transition-colors ${
+          isDarkMode
+            ? 'bg-[#132238] border-[#1E3A5F]'
+            : 'bg-white border-[#E8F0F8]'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3
+              className={`font-extrabold text-sm sm:text-base flex items-center gap-2 ${
+                isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+              }`}
+            >
+              <Lock className="w-4 h-4 text-[#E96746] dark:text-[#F07856]" />
+              <span>Account Security &amp; Password Management</span>
+            </h3>
+            <p
+              className={`text-xs sm:text-sm mt-0.5 ${
+                isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
+              }`}
+            >
+              Account Email: <strong className="font-mono text-[#E96746] dark:text-[#F07856]">{accountEmail || (currentRole === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local')}</strong> • Protected via Web Crypto PBKDF2 (100k rounds)
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setIsPasswordSectionOpen(!isPasswordSectionOpen);
+              setPasswordChangeStatus(null);
+            }}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] text-white shadow-xs transition cursor-pointer self-start sm:self-auto flex items-center gap-1.5"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            <span>{isPasswordSectionOpen ? 'Close Password Form' : 'Change Password'}</span>
+          </button>
+        </div>
+
+        {isPasswordSectionOpen && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!passwordValidation.isValid || !passwordsMatch) return;
+              setIsSubmittingPassword(true);
+              setPasswordChangeStatus(null);
+              try {
+                const targetEmail = accountEmail || (currentRole === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local');
+                const result = await authService.changePassword(targetEmail, newPasswordInput);
+                if (result.success) {
+                  setPasswordChangeStatus({
+                    type: 'success',
+                    message: 'Password updated successfully! Your account credentials and session have been refreshed.'
+                  });
+                  setNewPasswordInput('');
+                  setConfirmPasswordInput('');
+                } else {
+                  setPasswordChangeStatus({
+                    type: 'error',
+                    message: result.error || 'Failed to update password.'
+                  });
+                }
+              } catch {
+                setPasswordChangeStatus({
+                  type: 'error',
+                  message: 'An error occurred while updating the password.'
+                });
+              } finally {
+                setIsSubmittingPassword(false);
+              }
+            }}
+            className="p-4 sm:p-5 rounded-2xl border space-y-4 bg-black/5 dark:bg-[#0B1728] border-[#EDE3D2] dark:border-[#1E324F] animate-in fade-in duration-200"
+          >
+            {passwordChangeStatus && (
+              <div
+                className={`p-3.5 rounded-xl border text-xs flex items-center gap-2 ${
+                  passwordChangeStatus.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                {passwordChangeStatus.type === 'success' ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                )}
+                <span>{passwordChangeStatus.message}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* New Password */}
+              <div>
+                <label className={`text-xs font-bold block mb-1.5 ${isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'}`}>
+                  New Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    required
+                    placeholder="Enter new password"
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
+                      isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-70 hover:opacity-100 cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className={`text-xs font-bold block mb-1.5 ${isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'}`}>
+                  Confirm New Password
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 opacity-50" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPasswordInput}
+                    onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                    required
+                    placeholder="Confirm new password"
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
+                      isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-70 hover:opacity-100 cursor-pointer"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Password Match Status */}
+            {confirmPasswordInput.length > 0 && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                {passwordsMatch ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Passwords match</span>
+                  </span>
+                ) : (
+                  <span className="text-rose-500 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    <span>Passwords do not match</span>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Dynamic Strength Indicator & 5 Requirement Checks */}
+            <div className={`p-4 rounded-xl border space-y-3 ${isDarkMode ? 'bg-[#12233A] border-[#1E324F]' : 'bg-white border-[#EDE3D2]'}`}>
+              <div className="flex items-center justify-between text-xs font-bold">
+                <span>Password Strength:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-black ${
+                    passwordValidation.strength === 'Strong'
+                      ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
+                      : passwordValidation.strength === 'Medium'
+                      ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                      : 'bg-rose-500/20 text-rose-500'
+                  }`}
+                >
+                  {passwordValidation.strength}
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-slate-200 dark:bg-slate-700 h-2 rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 rounded-full ${
+                    passwordValidation.strength === 'Strong'
+                      ? 'bg-emerald-500'
+                      : passwordValidation.strength === 'Medium'
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                  }`}
+                  style={{ width: `${passwordValidation.score}%` }}
+                />
+              </div>
+
+              {/* 5 Requirements Checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                {passwordValidation.checks.map((req) => (
+                  <div
+                    key={req.id}
+                    className={`flex items-center gap-2 text-xs transition-colors ${
+                      req.met
+                        ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+                        : isDarkMode
+                        ? 'text-[#C1CDDC]/60'
+                        : 'text-[#52647A]'
+                    }`}
+                  >
+                    {req.met ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    ) : (
+                      <div className="w-3.5 h-3.5 rounded-full border border-slate-400 shrink-0" />
+                    )}
+                    <span>{req.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPasswordSectionOpen(false);
+                  setNewPasswordInput('');
+                  setConfirmPasswordInput('');
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold border transition cursor-pointer hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingPassword || !passwordValidation.isValid || !passwordsMatch}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-[#E96746] hover:bg-[#D45333] transition cursor-pointer shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{isSubmittingPassword ? 'Saving Password...' : 'Save New Password'}</span>
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {/* Local Storage Data Architecture & Persistence Card */}
       <div
         className={`p-6 rounded-2xl border space-y-4 transition-colors ${
           isDarkMode
@@ -1209,24 +1490,18 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               }`}
             >
               <Database className="w-4 h-4 text-[#F07856]" />
-              <span>Data Architecture &amp; Persistence</span>
+              <span>Data Architecture &amp; Local Persistence</span>
             </h3>
             <p
               className={`text-xs sm:text-sm mt-0.5 ${
                 isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
               }`}
             >
-              Operating on the canonical sample dataset with instant local persistence. Restore to pristine sample data anytime.
+              Operating on local browser demo storage with instant persistence. Restore to default sample data anytime.
             </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onOpenFirebaseModal}
-              className="px-4 py-2 rounded-xl text-xs font-bold bg-[#173B63] dark:bg-[#1E3A5F] hover:bg-[#0F2742] text-white shadow-xs transition cursor-pointer"
-            >
-              View Backend Schema
-            </button>
             <button
               onClick={() => setShowResetConfirm(true)}
               className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5 cursor-pointer"

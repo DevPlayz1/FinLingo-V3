@@ -12,15 +12,16 @@ import { LeaderboardView } from './components/LeaderboardView';
 import { ProfileView } from './components/ProfileView';
 import { LessonDetailModal } from './components/LessonDetailModal';
 import { QuizModal } from './components/QuizModal';
-import { FirebaseModal } from './components/FirebaseModal';
 import { LegalCenterModal } from './components/LegalCenterModal';
 import { LegalView } from './components/LegalView';
 import { AffirmativeConsentModal } from './components/AffirmativeConsentModal';
 import { RoleSelectScreen } from './components/RoleSelectScreen';
 import { RestrictedAccessModal } from './components/RestrictedAccessModal';
 import { AdminPanel } from './components/AdminPanel';
+import { AuthScreen } from './components/AuthScreen';
 
 import { dataService } from './services/dataService';
+import { authService, ActiveSession } from './services/authService';
 import {
   ActiveTab,
   UserProfile,
@@ -69,17 +70,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
+  // Authentication & Session state
+  const [currentSession, setCurrentSession] = useState<ActiveSession | null>(() => {
+    return authService.getCurrentSession();
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   // Demo Role state (Phase 2 RBAC)
-  const [currentRole, setCurrentRole] = useState<UserRole>(() => dataService.getCurrentRole());
+  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
+    const session = authService.getCurrentSession();
+    if (session) return session.role;
+    return dataService.getCurrentRole();
+  });
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [restrictedLessonModal, setRestrictedLessonModal] = useState<Lesson | null>(null);
 
   // Data state
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => dataService.getUserProfile());
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => dataService.getUserProfile(currentRole));
   const [tracks] = useState<LearningTrack[]>(() => dataService.getTracks());
   const [lessons, setLessons] = useState<Lesson[]>(() => dataService.getLessons());
   const [spacedDeck, setSpacedDeck] = useState<SpacedRepetitionItem[]>(() =>
-    dataService.getSpacedRepetitionDeck()
+    dataService.getSpacedRepetitionDeck(currentRole)
   );
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
     dataService.getLeaderboard()
@@ -91,7 +102,6 @@ export default function App() {
     lesson: Lesson;
     questions: QuizQuestion[];
   } | null>(null);
-  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [isConsentModalOpen, setIsConsentModalOpen] = useState(false);
   const [selectedLegalDocId, setSelectedLegalDocId] = useState<LegalDocId>('privacy');
@@ -102,9 +112,9 @@ export default function App() {
   };
 
   const handleRecordConsent = (record: ConsentRecord) => {
-    const current = dataService.getUserProfile();
+    const current = dataService.getUserProfile(currentRole);
     const updated = { ...current, consentRecord: record };
-    dataService.saveUserProfile(updated);
+    dataService.saveUserProfile(updated, currentRole);
     refreshState();
     showToast('Statutory Consent Recorded', undefined, 'success');
   };
@@ -125,11 +135,34 @@ export default function App() {
 
   // Sync profile, lessons & leaderboard helper
   const refreshState = () => {
-    const updatedProfile = dataService.getUserProfile();
+    const activeR = dataService.getCurrentRole();
+    const updatedProfile = dataService.getUserProfile(activeR);
     setUserProfile(updatedProfile);
     setLessons(dataService.getLessons());
-    setSpacedDeck(dataService.getSpacedRepetitionDeck());
+    setSpacedDeck(dataService.getSpacedRepetitionDeck(activeR));
     setLeaderboard(dataService.getLeaderboard());
+  };
+
+  // Login & Session handlers
+  const handleLoginSuccess = (session: { email: string; role: UserRole; displayName: string }) => {
+    const freshSession = authService.getCurrentSession();
+    setCurrentSession(freshSession);
+    setCurrentRole(session.role);
+    dataService.setRole(session.role);
+    setIsAuthModalOpen(false);
+    refreshState();
+    showToast(
+      `Welcome, ${session.displayName}! Signed in as ${session.role === 'admin' ? 'Faculty Admin' : 'College Scholar'}.`,
+      undefined,
+      'success'
+    );
+  };
+
+  const handleLogout = () => {
+    authService.logout();
+    setCurrentSession(null);
+    setIsRoleModalOpen(false);
+    showToast('You have signed out of FinLingo.', undefined, 'info');
   };
 
   // Role selection & switching
@@ -137,6 +170,19 @@ export default function App() {
     dataService.setRole(role);
     setCurrentRole(role);
     setIsRoleModalOpen(false);
+
+    // Keep active session in sync with role switch
+    const targetEmail = role === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local';
+    const targetName = role === 'admin' ? 'Prof. Eleanor Vance' : 'Student Scholar';
+    setCurrentSession({
+      email: targetEmail,
+      role,
+      displayName: targetName,
+      sessionToken: 'local_switch_' + Date.now(),
+      sessionEpoch: Date.now(),
+      loginTime: Date.now()
+    });
+
     refreshState();
     if (role === 'user' && activeTab === 'admin') {
       setActiveTab('dashboard');
@@ -316,6 +362,37 @@ export default function App() {
     );
   };
 
+  // Render AuthScreen if user is not authenticated or if modal is opened
+  if (!currentSession || isAuthModalOpen) {
+    return (
+      <div
+        className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
+          isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
+        }`}
+      >
+        <AuthScreen
+          onLoginSuccess={handleLoginSuccess}
+          initialRoleTab={currentRole}
+          isDarkMode={isDarkMode}
+        />
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+            <div
+              className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 ${
+                isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-xl bg-[#E96746] text-white flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-xs">{toastMessage.title}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
@@ -328,8 +405,9 @@ export default function App() {
         setActiveTab={handleSetActiveTab}
         userProfile={userProfile}
         currentRole={currentRole}
+        accountEmail={currentSession?.email}
+        onLogout={handleLogout}
         spacedRepetitionDueCount={spacedDeck.length}
-        onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
         onOpenLegalCenter={() => handleOpenLegalCenter('privacy')}
         onOpenRoleSelection={() => setIsRoleModalOpen(true)}
         isDarkMode={isDarkMode}
@@ -393,10 +471,11 @@ export default function App() {
           <ProfileView
             userProfile={userProfile}
             currentRole={currentRole}
+            accountEmail={currentSession?.email}
+            onLogout={handleLogout}
             onOpenRoleSelection={() => setIsRoleModalOpen(true)}
             onUpdateProfile={handleUpdateProfile}
             onResetData={handleResetData}
-            onOpenFirebaseModal={() => setIsFirebaseModalOpen(true)}
             onOpenLegalCenter={handleOpenLegalCenter}
             onOpenConsentModal={() => setIsConsentModalOpen(true)}
             isDarkMode={isDarkMode}
@@ -491,13 +570,6 @@ export default function App() {
                 }`}
               >
                 Leaderboard
-              </button>
-              <span>•</span>
-              <button
-                onClick={() => setIsFirebaseModalOpen(true)}
-                className="text-[#F07856] hover:underline font-bold transition cursor-pointer"
-              >
-                Backend Schema
               </button>
               <span>•</span>
               <button
@@ -665,11 +737,6 @@ export default function App() {
         />
       )}
 
-      {/* Firebase Architecture Modal */}
-      <FirebaseModal
-        isOpen={isFirebaseModalOpen}
-        onClose={() => setIsFirebaseModalOpen(false)}
-      />
 
       {/* Legal & Privacy Center Modal */}
       <LegalCenterModal
@@ -712,6 +779,10 @@ export default function App() {
               currentRole={currentRole}
               onSelectRole={handleSelectRole}
               onCancel={() => setIsRoleModalOpen(false)}
+              onOpenLogin={() => {
+                setIsRoleModalOpen(false);
+                setIsAuthModalOpen(true);
+              }}
               isDarkMode={isDarkMode}
             />
           </div>

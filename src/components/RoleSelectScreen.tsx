@@ -18,6 +18,7 @@ interface RoleSelectScreenProps {
   onSelectRole: (role: UserRole) => void;
   currentRole?: UserRole | null;
   onCancel?: () => void;
+  onOpenLogin?: () => void;
   isDarkMode?: boolean;
 }
 
@@ -25,6 +26,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
   onSelectRole,
   currentRole,
   onCancel,
+  onOpenLogin,
   isDarkMode = false
 }) => {
   return (
@@ -272,18 +274,26 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
 
       {/* Demonstration Notice & Dismiss */}
       <div className="max-w-5xl mx-auto w-full pb-4 space-y-4">
-        {onCancel && (
-          <div className="text-center">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold">
+          {onOpenLogin && (
+            <button
+              onClick={onOpenLogin}
+              className="text-[#E96746] dark:text-[#F07856] underline underline-offset-4 cursor-pointer hover:opacity-85"
+            >
+              Sign In with Specific Credentials &amp; Manage Passwords
+            </button>
+          )}
+          {onCancel && (
             <button
               onClick={onCancel}
-              className={`text-xs font-semibold underline underline-offset-4 cursor-pointer transition ${
+              className={`underline underline-offset-4 cursor-pointer transition ${
                 isDarkMode ? 'text-[#C1CDDC] hover:text-[#FFF8ED]' : 'text-[#52647A] hover:text-[#263238]'
               }`}
             >
-              Return to Current View without Changing Role
+              Return to Current View
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div
           className={`p-4 rounded-2xl border text-xs leading-relaxed flex items-start gap-3 transition-colors ${
@@ -301,7 +311,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
             evaluation without external backend accounts. Client-side checks simulate Role-Based
             Access Control (RBAC) in the UI and business logic, but do not provide cryptographic
             security against local browser code inspection. In production, roles are verified
-            server-side using Firebase Security Rules and cryptographically signed JWT auth tokens.
+            server-side using cryptographically signed session tokens and server-enforced access controls.
           </div>
         </div>
       </div>

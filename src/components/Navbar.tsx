@@ -13,7 +13,8 @@ import {
   Moon,
   Shield,
   GraduationCap,
-  ShieldAlert
+  ShieldAlert,
+  LogOut
 } from 'lucide-react';
 import { ActiveTab, UserProfile, UserRole } from '../types';
 import { UserAvatar } from './UserAvatar';
@@ -24,9 +25,10 @@ interface NavbarProps {
   userProfile: UserProfile;
   currentRole: UserRole;
   spacedRepetitionDueCount: number;
-  onOpenFirebaseModal: () => void;
   onOpenLegalCenter?: () => void;
   onOpenRoleSelection: () => void;
+  onLogout?: () => void;
+  accountEmail?: string;
   isDarkMode: boolean;
   onToggleDarkMode: () => void;
 }
@@ -37,9 +39,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   userProfile,
   currentRole,
   spacedRepetitionDueCount,
-  onOpenFirebaseModal,
   onOpenLegalCenter,
   onOpenRoleSelection,
+  onLogout,
+  accountEmail,
   isDarkMode,
   onToggleDarkMode
 }) => {
@@ -259,20 +262,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-[10px] opacity-75 font-normal underline hidden sm:inline">Switch</span>
             </button>
 
-            {/* Architecture Details Modal Button */}
-            <button
-              onClick={onOpenFirebaseModal}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
-                isDarkMode
-                  ? 'bg-[#12233A] text-[#C1CDDC] border-[#1E324F] hover:bg-[#1E324F] hover:text-[#FFF8ED]'
-                  : 'bg-[#FFFFFF] text-[#52647A] border-[#EDE3D2] hover:bg-[#FFF8ED] hover:text-[#263238]'
-              }`}
-              title="Architecture details: Designed for Firebase Auth & Cloud Firestore"
-            >
-              <Database className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
-              <span className="hidden sm:inline">Backend</span>
-            </button>
-
             {/* Legal & Privacy Center Button */}
             {onOpenLegalCenter && (
               <button
@@ -288,6 +277,22 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Shield className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
                 <span className="hidden xl:inline">Legal</span>
+              </button>
+            )}
+
+            {/* Sign Out / Logout Button */}
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-rose-500 cursor-pointer ${
+                  isDarkMode
+                    ? 'bg-[#12233A] text-rose-400 border-[#1E324F] hover:bg-rose-950/40 hover:border-rose-800'
+                    : 'bg-[#FFFFFF] text-rose-600 border-[#EDE3D2] hover:bg-rose-50 hover:border-rose-200'
+                }`}
+                title={`Sign out of ${accountEmail || currentRole}`}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
               </button>
             )}
           </div>

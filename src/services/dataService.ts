@@ -34,7 +34,8 @@ const STORAGE_KEYS = {
   CUSTOM_LESSONS: 'finlingo_custom_lessons_v1',
   CUSTOM_QUESTIONS: 'finlingo_custom_questions_v1',
   ADMIN_SETTINGS: 'finlingo_admin_settings_v1',
-  PROFILE: 'finlingo_user_profile_v1'
+  PROFILE: 'finlingo_user_profile_v1',
+  USER_PROGRESS_ZEROED: 'finlingo_user_progress_zeroed_v1'
 };
 
 const memoryStore: Record<string, string> = {};
@@ -122,6 +123,42 @@ export const USER_DEFAULT_PROFILE: UserProfile = {
     finance: 0
   },
   achievements: INITIAL_ACHIEVEMENTS,
+  privacySettings: {
+    isLeaderboardPublic: true,
+    showAvatarPublicly: true,
+    allowAnalytics: true
+  }
+};
+
+// 1B. ZEROED USER PROFILE (Used when Admin executes Reset User Progress)
+export const USER_ZEROED_PROFILE: UserProfile = {
+  uid: 'student_user_001',
+  displayName: 'Student Scholar',
+  email: 'learner@finlingo.local',
+  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+  university: 'Columbia Business School',
+  major: 'Commerce & Quantitative Finance',
+  graduationYear: '2026',
+  level: 1,
+  levelTitle: 'Intern Scholar',
+  currentXp: 0,
+  nextLevelXp: 200,
+  streakDays: 0,
+  lastActiveDate: '',
+  completedLessonIds: [],
+  bookmarkedLessonIds: [],
+  quizStats: {
+    totalAnswered: 0,
+    totalCorrect: 0,
+    perfectQuizzesCount: 0
+  },
+  lessonQuizRecords: {},
+  trackProgress: {
+    accounting: 0,
+    economics: 0,
+    finance: 0
+  },
+  achievements: INITIAL_ACHIEVEMENTS.map((a) => ({ ...a, isUnlocked: false, unlockedAt: undefined })),
   privacySettings: {
     isLeaderboardPublic: true,
     showAvatarPublicly: true,
@@ -414,8 +451,13 @@ class DataService {
   // --- USER PROFILE REPOSITORY (Maintains separate Admin & User local demo profiles) ---
   getUserProfile(role?: UserRole): UserProfile {
     const targetRole = role ?? this.getCurrentRole();
+    const isUserZeroed = targetRole === 'user' && safeStorage.getItem(STORAGE_KEYS.USER_PROGRESS_ZEROED) === 'true';
     const storageKey = targetRole === 'admin' ? STORAGE_KEYS.ADMIN_PROFILE : STORAGE_KEYS.USER_PROFILE;
-    const defaultBase = targetRole === 'admin' ? ADMIN_DEFAULT_PROFILE : USER_DEFAULT_PROFILE;
+    const defaultBase = targetRole === 'admin'
+      ? ADMIN_DEFAULT_PROFILE
+      : isUserZeroed
+      ? USER_ZEROED_PROFILE
+      : USER_DEFAULT_PROFILE;
 
     try {
       const stored = safeStorage.getItem(storageKey);
@@ -423,7 +465,7 @@ class DataService {
         const parsed: UserProfile = JSON.parse(stored);
         if (targetRole === 'user' && (parsed.displayName === 'Alex Morgan' || !parsed.displayName)) {
           parsed.displayName = 'Student Scholar';
-          parsed.email = 'scholar@university.edu';
+          parsed.email = 'learner@finlingo.local';
         }
         if (!parsed.privacySettings) {
           parsed.privacySettings = {
@@ -432,11 +474,11 @@ class DataService {
             allowAnalytics: true
           };
         }
-        if (!parsed.completedLessonIds) {
-          parsed.completedLessonIds = [...defaultBase.completedLessonIds];
+        if (parsed.completedLessonIds === undefined || !Array.isArray(parsed.completedLessonIds)) {
+          parsed.completedLessonIds = isUserZeroed ? [] : [...defaultBase.completedLessonIds];
         }
-        if (!parsed.bookmarkedLessonIds) {
-          parsed.bookmarkedLessonIds = [...defaultBase.bookmarkedLessonIds];
+        if (parsed.bookmarkedLessonIds === undefined || !Array.isArray(parsed.bookmarkedLessonIds)) {
+          parsed.bookmarkedLessonIds = isUserZeroed ? [] : [...defaultBase.bookmarkedLessonIds];
         }
         if (!parsed.quizStats) {
           parsed.quizStats = { ...defaultBase.quizStats };
@@ -1197,7 +1239,59 @@ class DataService {
     }
   }
 
+  // --- REQUIREMENT 7: ADMIN-ONLY RESET USER PROGRESS ---
+  // Completely resets Student Scholar's XP to 0, Level to 1, Streak to 0,
+  // Clears completed lessons, resets quiz telemetry, and relocks achievements.
+  // Preserves curriculum, questions, lessons, Admin settings and content.
+  // Ensures NO default XP or sample progress is restored after refresh or login.
+  resetUserProgress(role: UserRole): boolean {
+    if (role !== 'admin') {
+      console.warn('RBAC Violation: Non-admin attempted to reset user progress');
+      return false;
+    }
+
+    try {
+      // 1. Mark user progress as zeroed persistently
+      safeStorage.setItem(STORAGE_KEYS.USER_PROGRESS_ZEROED, 'true');
+
+      // 2. Clone pristine zeroed profile
+      const zeroedCopy: UserProfile = JSON.parse(JSON.stringify(USER_ZEROED_PROFILE));
+      safeStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(zeroedCopy));
+
+      // 3. Clear user-specific spaced repetition deck
+      safeStorage.setItem(STORAGE_KEYS.USER_SPACED_REPETITION, '[]');
+
+      // 4. Remove any legacy user profile or spaced repetition keys
+      safeStorage.removeItem(STORAGE_KEYS.LEGACY_PROFILE);
+      safeStorage.removeItem(STORAGE_KEYS.LEGACY_SPACED_REPETITION);
+
+      // 5. Update user ranking in leaderboard: 0 XP, 0 streak, Level 1 Intern Scholar
+      const currentLeaderboard = this.getLeaderboard();
+      const userEntry = currentLeaderboard.find((e) => e.isCurrentUser || e.id === 'lb-curr');
+      if (userEntry) {
+        userEntry.xp = 0;
+        userEntry.streak = 0;
+        userEntry.badge = 'Intern Scholar';
+      }
+      currentLeaderboard.sort((a, b) => b.xp - a.xp);
+      currentLeaderboard.forEach((entry, idx) => {
+        entry.rank = idx + 1;
+      });
+      safeStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(currentLeaderboard));
+
+      return true;
+    } catch (e) {
+      console.error('Error during resetUserProgress:', e);
+      return false;
+    }
+  }
+
+  isUserProgressZeroed(): boolean {
+    return safeStorage.getItem(STORAGE_KEYS.USER_PROGRESS_ZEROED) === 'true';
+  }
+
   resetAllData(): void {
+    safeStorage.removeItem(STORAGE_KEYS.USER_PROGRESS_ZEROED);
     this.restoreDefaultData('all');
   }
 }

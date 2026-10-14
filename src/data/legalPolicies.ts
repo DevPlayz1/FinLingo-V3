@@ -67,7 +67,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         content: [
           'To guarantee maximum transparency regarding where your data lives, please note our current operational mode:',
           '• Active Prototyping & Client-Side Mode: In the current version of FinLingo, your student profile, custom avatar images, quiz scores, spaced repetition deck, and study streaks are stored directly within your device’s local browser storage (HTML5 Web Storage). No telemetry, tracker cookies, or user dossiers are secretly transmitted to external ad networks or third-party data brokers.',
-          '• Production Cloud Architecture (Firebase/Google Cloud): As FinLingo provisions live Firebase Authentication and Cloud Firestore, personal data will be synchronized to secure, encrypted cloud data centers with role-based access control. Whenever cloud persistence is activated, you will be notified, and all principles articulated in this Policy apply directly to cloud storage.'
+          '• Local Demonstration Architecture: FinLingo operates strictly in local demo mode without external cloud backend or third-party authentication services. Personal data and learning progress remain on your local device.'
         ]
       },
       {
@@ -81,7 +81,7 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
             subheading: 'A. Academic & Profile Information (Provided by You)',
             paragraphs: [
               '• Profile Name / Display Name: Used to personalize your study dashboard and represent you on the community leaderboard.',
-              '• Email Address: Used for authentication identifiers, password reset, and vital educational communications.',
+              '• Email Address: Used for authentication identifiers, in-app credentials, and local session management.',
               '• College / University Affiliation: (e.g., Delhi University, IIM, Mumbai University, Columbia) used to categorize student leaderboards and peer study leagues.',
               '• Academic Discipline & Graduation Year: (e.g., Commerce & Finance, Class of 2026) used to recommend relevant track modules.',
               '• Optional Profile Avatar / Photo: A custom image selected or captured by you. The image is cropped, compressed, and sanitized purely client-side before storage.'
@@ -132,9 +132,8 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         heading: '6. Third-Party Service Providers & Sub-Processors',
         content: [
           'FinLingo does NOT sell, rent, monetize, or trade student data with third-party advertising exchanges. We utilize only reputable infrastructure sub-processors essential to delivering the web application:',
-          '• Firebase Authentication & Cloud Firestore (Google LLC / Google Cloud India): Cloud identity management and encrypted database infrastructure.',
-          '• Firebase Storage: Secure, access-controlled cloud object storage for optional user avatar assets.',
-          '• Google Cloud Hosting / CDN: Edge content delivery, application asset hosting, and DDoS mitigation.',
+          '• Local Browser Sandbox: All user session tokens and PBKDF2 credential hashes are managed locally without external third-party authentication services.',
+          '• Content Delivery Network: Edge content delivery and application asset hosting.',
           '• Unsplash Photography: Serves initial default placeholder avatar imagery (no student identifiers transmitted).',
           'All third-party sub-processors are bound by data processing agreements ensuring security standards compliant with Section 8 of the DPDPA 2023.'
         ]
@@ -319,9 +318,9 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         heading: '2. Technical Safeguards & Controls',
         content: [
           '• Encryption in Transit: All communications between your web browser and FinLingo servers are strictly enforced over Transport Layer Security (TLS 1.3 / HTTPS). Plain HTTP requests are automatically upgraded.',
-          '• Zero Plaintext Passwords: User authentication is handled entirely through Firebase Authentication. FinLingo never stores, handles, or has access to plaintext user passwords.',
+          '• Zero Plaintext Passwords: User authentication uses salted PBKDF2 cryptographic derivations. Plaintext passwords are never stored in localStorage, sessionStorage, or logs.',
           '• Image Sanitisation: Uploaded avatar images are inspected via binary magic bytes (verifying genuine JPEG, PNG, or WebP files) and re-encoded client-side through HTML5 Canvas, eliminating malicious metadata, EXIF geotags, and embedded executable scripts.',
-          '• Role-Based Least-Privilege Rules: Cloud Firestore and Firebase Storage access are governed by strict security rules ensuring students can only read and write their own documents.'
+          '• Role-Based Least-Privilege Rules: Admin screens and academic editing capabilities are strictly restricted to verified administrative roles.'
         ]
       },
       {
@@ -449,8 +448,8 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         content: [
           'We implement real, automated deletion rather than a cosmetic button:',
           '• Immediate Local Wipe: In the "Profile" or "Privacy Controls" section, clicking "Reset All Data / Erase Profile" immediately clears all FinLingo data keys from your browser localStorage and resets the session to initial state.',
-          '• Cloud Account Erasure: For registered cloud accounts (Firebase Auth & Firestore), account deletion triggers deletion of the user document in `/users/{userId}`, removal of all sub-collections (spaced repetition queue, quiz attempts), deletion of avatar images in Firebase Storage at `/users/{userId}/avatar/*`, and deletion of the Firebase Authentication user record.',
-          '• Written Request Option: You may also email [PRIVACY CONTACT EMAIL: privacy@finlingo.app] from your registered email address with the subject "Data Erasure Request". We will process and confirm deletion within thirty (30) days.'
+          '• Local Demo Account Erasure: Account reset immediately removes learning history, cached profiles, and local session tokens from browser storage.',
+          '• Written Request Option: You may also email [PRIVACY CONTACT EMAIL: privacy@finlingo.app] with the subject "Data Erasure Request". We will process and confirm deletion within thirty (30) days.'
         ]
       },
       {
@@ -614,9 +613,9 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         id: 'internal-access-control',
         heading: '1. Access Control & Credential Governance',
         content: [
-          '• Principle of Least Privilege: Access to Google Cloud Console, Firebase Console, DNS records, and source repositories must be strictly limited to designated engineering administrators.',
+          '• Principle of Least Privilege: Access to production servers, DNS records, and source repositories must be strictly limited to designated engineering administrators.',
           '• Mandatory MFA: Hardware keys or time-based one-time password (TOTP) authenticator apps must be enforced for all administrator accounts with write or deploy permissions. SMS 2FA is discouraged.',
-          '• Zero Plaintext Secrets in Code: No GCP service-account JSON keys, production API keys, or database administrative tokens shall ever be committed to git repositories or client bundles. All cloud keys must be stored in secure environment secrets managers.',
+          '• Zero Plaintext Secrets in Code: No server private keys, production API keys, or administrative tokens shall ever be committed to git repositories or client bundles. All keys must be stored in secure environment secrets managers.',
           '• Quarterly Access Reviews: Administrator privileges must be reviewed every 90 days. Access for offboarded contributors must be revoked immediately upon separation.'
         ]
       },
@@ -624,9 +623,9 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         id: 'data-sanitization-backup',
         heading: '2. Backup, Recovery, and Storage Security',
         content: [
-          '• Cloud Firestore Automated Backups: Daily automated Firestore backups must be configured with a 30-day retention window in an isolated storage bucket.',
+          '• Database Automated Backups: Regular automated backups must be configured with a 30-day retention window in an isolated storage facility.',
           '• Point-in-Time Recovery (PITR): PITR must be enabled for production databases to allow rollback in case of accidental corruption or data loss.',
-          '• Avatar Storage Hygiene: Unused or orphaned avatar files in Firebase Storage must be cleaned via an automated lifecycle rule after 30 days of account deletion.',
+          '• Storage Hygiene: Unused or orphaned avatar files must be cleaned via an automated lifecycle rule after 30 days of account deletion.',
           '• Client Data Sanitisation: The client application strictly validates file uploads (JPEG/PNG/WebP, max 5 MB) and strips EXIF metadata via canvas re-encoding before storage.'
         ]
       },
@@ -654,8 +653,8 @@ export const LEGAL_DOCUMENTS: Record<string, LegalDocument> = {
         id: 'containment-postmortem',
         heading: '5. Containment, Forensics, and Post-Mortem',
         content: [
-          '• Immediate Containment: Revoke compromised API keys, rotate Firebase service tokens, invalidate affected session tokens, and deploy restrictive Security Rules if necessary.',
-          '• Evidence Preservation: Preserve server logs, Cloud Audit Trail, and git commit history without modification for forensic analysis by cybersecurity professionals.',
+          '• Immediate Containment: Revoke compromised API keys, rotate service tokens, invalidate affected session tokens, and deploy restrictive firewall rules if necessary.',
+          '• Evidence Preservation: Preserve server logs, audit trails, and git commit history without modification for forensic analysis by cybersecurity professionals.',
           '• Root Cause Analysis (RCA): Within seven (7) business days of incident resolution, the engineering lead must author a comprehensive RCA detailing timeline, root cause, impact, corrective actions, and prevention roadmap.'
         ]
       }
