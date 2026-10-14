@@ -24,7 +24,7 @@ import {
   Coins,
   Crown
 } from 'lucide-react';
-import { UserProfile, LearningTrack, Lesson, ActiveTab, LeaderboardEntry, UserRole } from '../types';
+import { UserProfile, LearningTrack, Lesson, ActiveTab, LeaderboardEntry, UserRole, SpacedRepetitionItem } from '../types';
 import { calculateLevelProgress, LEVEL_TIERS } from '../services/gamification';
 import { UserAvatar } from './UserAvatar';
 
@@ -34,6 +34,7 @@ interface DashboardViewProps {
   lessons: Lesson[];
   currentRole?: UserRole;
   spacedRepetitionDueCount: number;
+  spacedRepetitionItems?: SpacedRepetitionItem[];
   leaderboard?: LeaderboardEntry[];
   onSelectTrack: (trackId: string) => void;
   onOpenLesson: (lesson: Lesson) => void;
@@ -49,6 +50,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   lessons,
   currentRole = 'user',
   spacedRepetitionDueCount,
+  spacedRepetitionItems = [],
   onSelectTrack,
   onOpenLesson,
   onStartQuiz,
@@ -105,13 +107,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const finStats = getTrackStats('finance');
   const nextLessonTrackStats = getTrackStats(nextAvailableLesson.trackId);
 
-  // Accuracy calculation
+  // Accuracy calculation: safely handle zero attempts
   const accuracy =
     userProfile.quizStats.totalAnswered > 0
       ? Math.round(
           (userProfile.quizStats.totalCorrect / userProfile.quizStats.totalAnswered) * 100
         )
-      : 88;
+      : 0;
+
+  // Weekly activity metrics derived from userProfile.weeklyActivity
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const weeklyData = userProfile.weeklyActivity || {
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
+    Sun: 0
+  };
+  const activeDaysCount = daysOfWeek.filter((d) => (weeklyData[d] || 0) > 0).length;
+  const weeklyGoalPercent = Math.round((activeDaysCount / 7) * 100);
+  const maxWeeklyBar = Math.max(1, ...daysOfWeek.map((d) => weeklyData[d] || 0));
 
   // Theme tokens
   const primaryText = isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]';
@@ -284,11 +301,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div>
               <div className="flex items-baseline gap-1">
                 <span className={`text-xl sm:text-2xl font-black tabular-nums ${primaryText}`}>
-                  {accuracy}%
+                  {userProfile.quizStats.totalAnswered > 0 ? `${accuracy}%` : '0%'}
                 </span>
               </div>
               <span className={`block text-[11px] font-semibold ${secondaryText}`}>
-                Quiz Accuracy
+                {userProfile.quizStats.totalAnswered > 0 ? 'Quiz Accuracy' : 'Quiz Accuracy (No attempts)'}
               </span>
             </div>
           </div>
@@ -658,27 +675,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
                 {/* 7 Day Pill Bars */}
                 <div className="flex-1 grid grid-cols-7 gap-1 items-end h-24 pb-4 border-b border-slate-200 dark:border-slate-700">
-                  {[
-                    { day: 'Mon', h: '70%' },
-                    { day: 'Tue', h: '35%' },
-                    { day: 'Wed', h: '80%' },
-                    { day: 'Thu', h: '45%' },
-                    { day: 'Fri', h: '55%' },
-                    { day: 'Sat', h: '75%' },
-                    { day: 'Sun', h: '30%' }
-                  ].map((bar) => (
-                    <div key={bar.day} className="flex flex-col items-center gap-1.5 h-full justify-end">
-                      <div className="w-2.5 sm:w-3 bg-[#FDF0EB] dark:bg-[#1E2E42] rounded-full h-full relative overflow-hidden flex items-end">
-                        <div
-                          className="w-full bg-[#E96746] dark:bg-[#F07856] rounded-full transition-all duration-500"
-                          style={{ height: bar.h }}
-                        />
+                  {daysOfWeek.map((day) => {
+                    const count = weeklyData[day] || 0;
+                    const heightPercent = count > 0 ? Math.min(100, Math.round((count / Math.max(6, maxWeeklyBar)) * 100)) : 0;
+                    return (
+                      <div key={day} className="flex flex-col items-center gap-1.5 h-full justify-end">
+                        <div className="w-2.5 sm:w-3 bg-[#FDF0EB] dark:bg-[#1E2E42] rounded-full h-full relative overflow-hidden flex items-end">
+                          <div
+                            className="w-full bg-[#E96746] dark:bg-[#F07856] rounded-full transition-all duration-500"
+                            style={{ height: `${heightPercent}%` }}
+                          />
+                        </div>
+                        <span className={`text-[9px] font-semibold ${secondaryText}`}>
+                          {day}
+                        </span>
                       </div>
-                      <span className={`text-[9px] font-semibold ${secondaryText}`}>
-                        {bar.day}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -697,20 +710,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                       fill="none"
                       stroke="#E96746"
-                      strokeDasharray="73, 100"
+                      strokeDasharray={`${weeklyGoalPercent}, 100`}
                       strokeWidth="3.5"
                       strokeLinecap="round"
                     />
                   </svg>
                   <span className={`absolute text-sm font-black ${primaryText}`}>
-                    73%
+                    {weeklyGoalPercent}%
                   </span>
                 </div>
                 <span className={`text-[11px] font-medium mt-1 ${secondaryText}`}>
                   Weekly Goal
                 </span>
                 <span className={`text-xs font-black ${primaryText}`}>
-                  5 / 7 days
+                  {activeDaysCount} / 7 days
                 </span>
               </div>
             </div>
@@ -823,69 +836,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-3.5">
-            {/* Activity 1 */}
-            <div className="flex items-center justify-between text-xs gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center shrink-0">
-                  <FileText className="w-4 h-4 text-emerald-400" />
+            {userProfile.recentActivity && userProfile.recentActivity.length > 0 ? (
+              userProfile.recentActivity.slice(0, 4).map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between text-xs gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={`font-bold truncate ${primaryText}`}>
+                        {activity.title}
+                      </p>
+                      <span className={`text-[11px] ${secondaryText}`}>
+                        {new Date(activity.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  {activity.xpEarned > 0 ? (
+                    <span className="font-extrabold text-[#E96746] dark:text-[#F07856] shrink-0">
+                      +{activity.xpEarned} XP
+                    </span>
+                  ) : (
+                    <span className={`font-medium ${secondaryText}`}>-</span>
+                  )}
                 </div>
-                <div className="min-w-0">
-                  <p className={`font-bold truncate ${primaryText}`}>
-                    Completed: Introduction to Financial Statements
-                  </p>
-                  <span className={`text-[11px] ${secondaryText}`}>2 hours ago</span>
+              ))
+            ) : (
+              <div className="py-7 text-center space-y-2">
+                <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                  <FileText className="w-5 h-5" />
                 </div>
+                <p className={`text-xs font-bold ${primaryText}`}>No recent activity recorded</p>
+                <p className={`text-[11px] ${secondaryText}`}>
+                  Complete lessons and quizzes to build your activity history.
+                </p>
               </div>
-              <span className="font-extrabold text-[#E96746] dark:text-[#F07856] shrink-0">+20 XP</span>
-            </div>
-
-            {/* Activity 2 */}
-            <div className="flex items-center justify-between text-xs gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                  <Target className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className={`font-bold truncate ${primaryText}`}>
-                    Quiz: Double Entry System
-                  </p>
-                  <span className={`text-[11px] ${secondaryText}`}>1 day ago</span>
-                </div>
-              </div>
-              <span className="font-extrabold text-[#E96746] dark:text-[#F07856] shrink-0">+15 XP</span>
-            </div>
-
-            {/* Activity 3 */}
-            <div className="flex items-center justify-between text-xs gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/40 text-[#E96746] flex items-center justify-center shrink-0">
-                  <BookOpen className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className={`font-bold truncate ${primaryText}`}>
-                    Viewed: Accrual vs. Cash Accounting
-                  </p>
-                  <span className={`text-[11px] ${secondaryText}`}>1 day ago</span>
-                </div>
-              </div>
-              <span className={`font-medium ${secondaryText}`}>-</span>
-            </div>
-
-            {/* Activity 4 */}
-            <div className="flex items-center justify-between text-xs gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                </div>
-                <div className="min-w-0">
-                  <p className={`font-bold truncate ${primaryText}`}>
-                    Started: Revenue Recognition
-                  </p>
-                  <span className={`text-[11px] ${secondaryText}`}>2 days ago</span>
-                </div>
-              </div>
-              <span className={`font-medium ${secondaryText}`}>-</span>
-            </div>
+            )}
           </div>
         </section>
 
@@ -900,7 +886,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Spaced Review
               </h3>
               <span className="w-5 h-5 rounded-full bg-[#E96746] dark:bg-[#F07856] text-white text-[11px] font-black inline-flex items-center justify-center">
-                {spacedRepetitionDueCount || 2}
+                {spacedRepetitionDueCount}
               </span>
             </div>
 
@@ -914,51 +900,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           <div className="space-y-3">
-            {/* Review Item 1 */}
-            <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'}`}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4" />
+            {spacedRepetitionItems && spacedRepetitionItems.length > 0 ? (
+              spacedRepetitionItems.slice(0, 2).map((item) => (
+                <div
+                  key={item.id}
+                  className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                    isDarkMode
+                      ? 'bg-[#0B1728] border-[#1E324F]'
+                      : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className={`text-xs font-bold truncate ${primaryText}`}>
+                        {item.prompt}
+                      </h4>
+                      <span className={`text-[11px] block capitalize ${secondaryText}`}>
+                        {item.trackId} Track • Stage {item.repetitionLevel}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={onOpenPractice}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#E96746] dark:border-[#F07856] text-[#E96746] dark:text-[#F07856] hover:bg-[#E96746] hover:text-white dark:hover:bg-[#F07856] transition cursor-pointer shrink-0"
+                  >
+                    Review
+                  </button>
                 </div>
-                <div className="min-w-0">
-                  <h4 className={`text-xs font-bold truncate ${primaryText}`}>
-                    Depreciation Methods
-                  </h4>
-                  <span className={`text-[11px] block ${secondaryText}`}>
-                    Last reviewed 3 days ago
-                  </span>
+              ))
+            ) : (
+              <div className="py-7 text-center space-y-2">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-4 h-4" />
                 </div>
+                <p className={`text-xs font-bold ${primaryText}`}>Review Deck Cleared</p>
+                <p className={`text-[11px] ${secondaryText}`}>
+                  0 questions pending review. Missed quiz questions will appear here.
+                </p>
               </div>
-              <button
-                onClick={onOpenPractice}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#E96746] dark:border-[#F07856] text-[#E96746] dark:text-[#F07856] hover:bg-[#E96746] hover:text-white dark:hover:bg-[#F07856] transition cursor-pointer shrink-0"
-              >
-                Review
-              </button>
-            </div>
-
-            {/* Review Item 2 */}
-            <div className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'}`}>
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                  <Target className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <h4 className={`text-xs font-bold truncate ${primaryText}`}>
-                    Types of Market Structures
-                  </h4>
-                  <span className={`text-[11px] block ${secondaryText}`}>
-                    Last reviewed 4 days ago
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={onOpenPractice}
-                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-[#E96746] dark:border-[#F07856] text-[#E96746] dark:text-[#F07856] hover:bg-[#E96746] hover:text-white dark:hover:bg-[#F07856] transition cursor-pointer shrink-0"
-              >
-                Review
-              </button>
-            </div>
+            )}
           </div>
         </section>
 

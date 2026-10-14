@@ -124,6 +124,14 @@ export interface QuizCompletionResult {
   };
 }
 
+export interface UserActivityItem {
+  id: string;
+  type: 'lesson_completed' | 'quiz_passed' | 'quiz_attempted' | 'review_completed';
+  title: string;
+  timestamp: number;
+  xpEarned: number;
+}
+
 export interface UserProfile {
   uid: string;
   displayName: string;
@@ -154,6 +162,8 @@ export interface UserProfile {
     finance: number;
   };
   achievements: Achievement[];
+  weeklyActivity?: Record<string, number>;
+  recentActivity?: UserActivityItem[];
   privacySettings?: {
     isLeaderboardPublic: boolean;
     showAvatarPublicly: boolean;

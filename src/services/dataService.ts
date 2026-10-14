@@ -123,6 +123,31 @@ export const USER_DEFAULT_PROFILE: UserProfile = {
     finance: 0
   },
   achievements: INITIAL_ACHIEVEMENTS,
+  weeklyActivity: {
+    Mon: 4,
+    Tue: 2,
+    Wed: 5,
+    Thu: 3,
+    Fri: 3,
+    Sat: 4,
+    Sun: 2
+  },
+  recentActivity: [
+    {
+      id: 'act-1',
+      type: 'lesson_completed',
+      title: 'Completed: Introduction to Financial Statements',
+      timestamp: Date.now() - 7200000,
+      xpEarned: 20
+    },
+    {
+      id: 'act-2',
+      type: 'quiz_passed',
+      title: 'Quiz: Introduction to Financial Statements (4/4 Correct)',
+      timestamp: Date.now() - 86400000,
+      xpEarned: 145
+    }
+  ],
   privacySettings: {
     isLeaderboardPublic: true,
     showAvatarPublicly: true,
@@ -159,6 +184,16 @@ export const USER_ZEROED_PROFILE: UserProfile = {
     finance: 0
   },
   achievements: INITIAL_ACHIEVEMENTS.map((a) => ({ ...a, isUnlocked: false, unlockedAt: undefined })),
+  weeklyActivity: {
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
+    Sun: 0
+  },
+  recentActivity: [],
   privacySettings: {
     isLeaderboardPublic: true,
     showAvatarPublicly: true,
@@ -203,6 +238,24 @@ export const ADMIN_DEFAULT_PROFILE: UserProfile = {
     finance: 33
   },
   achievements: INITIAL_ACHIEVEMENTS.map(a => ({ ...a, isUnlocked: true, unlockedAt: Date.now() - 86400000 })),
+  weeklyActivity: {
+    Mon: 6,
+    Tue: 5,
+    Wed: 6,
+    Thu: 7,
+    Fri: 5,
+    Sat: 6,
+    Sun: 4
+  },
+  recentActivity: [
+    {
+      id: 'act-admin-1',
+      type: 'lesson_completed',
+      title: 'Completed: Advanced DCF Modeling',
+      timestamp: Date.now() - 3600000,
+      xpEarned: 40
+    }
+  ],
   privacySettings: {
     isLeaderboardPublic: true,
     showAvatarPublicly: true,
@@ -487,7 +540,15 @@ class DataService {
           parsed.lessonQuizRecords = { ...defaultBase.lessonQuizRecords };
         }
         if (!parsed.achievements || !Array.isArray(parsed.achievements) || parsed.achievements.length === 0) {
-          parsed.achievements = JSON.parse(JSON.stringify(defaultBase.achievements));
+          parsed.achievements = isUserZeroed
+            ? INITIAL_ACHIEVEMENTS.map(a => ({ ...a, isUnlocked: false, unlockedAt: undefined }))
+            : JSON.parse(JSON.stringify(defaultBase.achievements));
+        }
+        if (!parsed.weeklyActivity) {
+          parsed.weeklyActivity = { ...(defaultBase.weeklyActivity || { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }) };
+        }
+        if (!parsed.recentActivity) {
+          parsed.recentActivity = [...(defaultBase.recentActivity || [])];
         }
 
         // Refresh level info based on currentXp
@@ -590,6 +651,31 @@ class DataService {
       profile.currentXp += awardedXp;
     }
 
+    // Update daily/weekly activity
+    const dayNames: Array<'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat'> = [
+      'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+    ];
+    const todayName = dayNames[new Date().getDay()];
+    if (!profile.weeklyActivity) {
+      profile.weeklyActivity = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    }
+    profile.weeklyActivity[todayName] = (profile.weeklyActivity[todayName] || 0) + 1;
+
+    if (!profile.recentActivity) {
+      profile.recentActivity = [];
+    }
+    const lessonObj = this.getLesson(lessonId);
+    profile.recentActivity.unshift({
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      type: 'lesson_completed',
+      title: `Completed: ${lessonObj?.title || lessonId}`,
+      timestamp: Date.now(),
+      xpEarned: awardedXp
+    });
+    if (profile.recentActivity.length > 10) {
+      profile.recentActivity = profile.recentActivity.slice(0, 10);
+    }
+
     // Maintain study streak and record activity date
     const streakInfo = this.updateStreakAndActivity(profile);
 
@@ -684,6 +770,32 @@ class DataService {
     profile.quizStats.totalCorrect += correctCount;
     if (isPerfect) {
       profile.quizStats.perfectQuizzesCount += 1;
+    }
+
+    // Update daily/weekly activity
+    const dayNames: Array<'Sun' | 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat'> = [
+      'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'
+    ];
+    const todayName = dayNames[new Date().getDay()];
+    if (!profile.weeklyActivity) {
+      profile.weeklyActivity = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+    }
+    profile.weeklyActivity[todayName] = (profile.weeklyActivity[todayName] || 0) + 1;
+
+    // Log recent activity
+    if (!profile.recentActivity) {
+      profile.recentActivity = [];
+    }
+    const lessonTitle = lessonId ? (this.getLesson(lessonId)?.title || lessonId) : 'Curriculum Quiz';
+    profile.recentActivity.unshift({
+      id: `act-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      type: isPerfect ? 'quiz_passed' : 'quiz_attempted',
+      title: `Quiz: ${lessonTitle} (${correctCount}/${answeredCount} Correct)`,
+      timestamp: Date.now(),
+      xpEarned: awardedXp
+    });
+    if (profile.recentActivity.length > 10) {
+      profile.recentActivity = profile.recentActivity.slice(0, 10);
     }
 
     // Maintain streak and daily activity
@@ -910,8 +1022,13 @@ class DataService {
   // --- SPACED REPETITION ENGINE (Role-isolated Flashcard Decks) ---
   getSpacedRepetitionDeck(role?: UserRole): SpacedRepetitionItem[] {
     const targetRole = role ?? this.getCurrentRole();
+    const isUserZeroed = targetRole === 'user' && safeStorage.getItem(STORAGE_KEYS.USER_PROGRESS_ZEROED) === 'true';
     const storageKey = targetRole === 'admin' ? STORAGE_KEYS.ADMIN_SPACED_REPETITION : STORAGE_KEYS.USER_SPACED_REPETITION;
-    const defaultDeck = targetRole === 'admin' ? DEFAULT_ADMIN_SPACED_REPETITION : DEFAULT_USER_SPACED_REPETITION;
+    const defaultDeck = targetRole === 'admin'
+      ? DEFAULT_ADMIN_SPACED_REPETITION
+      : isUserZeroed
+      ? []
+      : DEFAULT_USER_SPACED_REPETITION;
 
     try {
       const stored = safeStorage.getItem(storageKey);
@@ -919,7 +1036,7 @@ class DataService {
         return JSON.parse(stored);
       }
       // Backward compatibility check for legacy key
-      if (targetRole === 'user') {
+      if (targetRole === 'user' && !isUserZeroed) {
         const legacy = safeStorage.getItem(STORAGE_KEYS.LEGACY_SPACED_REPETITION);
         if (legacy) return JSON.parse(legacy);
       }
@@ -1039,7 +1156,7 @@ class DataService {
   getLeaderboard(): LeaderboardEntry[] {
     // 1. Always start from a deep clone of the canonical sample dataset in curriculum.ts
     const baseLeaderboard: LeaderboardEntry[] = JSON.parse(JSON.stringify(INITIAL_LEADERBOARD));
-    const currentProfile = this.getUserProfile();
+    const studentProfile = this.getUserProfile('user');
 
     try {
       const stored = safeStorage.getItem(STORAGE_KEYS.LEADERBOARD);
@@ -1064,18 +1181,18 @@ class DataService {
       // Fallback directly to baseLeaderboard
     }
 
-    // 2. Synchronize current demo user from their active profile
+    // 2. Synchronize current demo student user from their active profile
     const userIndex = baseLeaderboard.findIndex(e => e.isCurrentUser || e.id === 'lb-curr');
     if (userIndex > -1) {
-      const isPublic = currentProfile.privacySettings?.isLeaderboardPublic !== false;
-      const showAvatar = currentProfile.privacySettings?.showAvatarPublicly !== false;
+      const isPublic = studentProfile.privacySettings?.isLeaderboardPublic !== false;
+      const showAvatar = studentProfile.privacySettings?.showAvatarPublicly !== false;
 
-      baseLeaderboard[userIndex].displayName = isPublic ? currentProfile.displayName : 'Anonymous Scholar';
-      baseLeaderboard[userIndex].avatar = showAvatar ? currentProfile.avatar : '';
-      baseLeaderboard[userIndex].university = isPublic ? currentProfile.university : 'Confidential Campus';
-      baseLeaderboard[userIndex].xp = currentProfile.currentXp;
-      baseLeaderboard[userIndex].streak = currentProfile.streakDays;
-      baseLeaderboard[userIndex].badge = currentProfile.levelTitle;
+      baseLeaderboard[userIndex].displayName = isPublic ? studentProfile.displayName : 'Anonymous Scholar';
+      baseLeaderboard[userIndex].avatar = showAvatar ? studentProfile.avatar : '';
+      baseLeaderboard[userIndex].university = isPublic ? studentProfile.university : 'Confidential Campus';
+      baseLeaderboard[userIndex].xp = studentProfile.currentXp;
+      baseLeaderboard[userIndex].streak = studentProfile.streakDays;
+      baseLeaderboard[userIndex].badge = studentProfile.levelTitle;
       baseLeaderboard[userIndex].isCurrentUser = true;
     }
 

@@ -423,6 +423,7 @@ export default function App() {
             lessons={lessons}
             currentRole={currentRole}
             spacedRepetitionDueCount={spacedDeck.length}
+            spacedRepetitionItems={spacedDeck}
             leaderboard={leaderboard}
             onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
             onOpenLesson={handleOpenLesson}
@@ -497,7 +498,7 @@ export default function App() {
             currentRole={currentRole}
             lessons={lessons}
             leaderboard={leaderboard}
-            userProfile={userProfile}
+            userProfile={currentRole === 'admin' ? dataService.getUserProfile('user') : userProfile}
             onRefreshData={refreshState}
             onSwitchRole={handleSelectRole}
             onOpenRoleSelection={() => setIsRoleModalOpen(true)}

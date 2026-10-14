@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Shield,
   Lock,
@@ -121,6 +121,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [editingEntry, setEditingEntry] = useState<LeaderboardEntry | null>(null);
   const [demoUserXpInput, setDemoUserXpInput] = useState<number>(userProfile.currentXp);
   const [resetModalOpen, setResetModalOpen] = useState(false);
+
+  useEffect(() => {
+    setDemoUserXpInput(userProfile.currentXp);
+  }, [userProfile.currentXp]);
 
   // 1. Toggle restricted status on a lesson
   const handleToggleLessonRestriction = (lesson: Lesson) => {

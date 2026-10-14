@@ -255,7 +255,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       ? Math.round(
           (userProfile.quizStats.totalCorrect / userProfile.quizStats.totalAnswered) * 100
         )
-      : 100;
+      : 0;
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -802,14 +802,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
               }`}
             >
-              {accuracy}%
+              {userProfile.quizStats.totalAnswered > 0 ? `${accuracy}%` : '0%'}
             </div>
             <div
               className={`text-xs mt-1 ${
                 isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
               }`}
             >
-              {userProfile.quizStats.totalCorrect}/{userProfile.quizStats.totalAnswered} Correct
+              {userProfile.quizStats.totalAnswered > 0
+                ? `${userProfile.quizStats.totalCorrect}/${userProfile.quizStats.totalAnswered} Correct`
+                : 'No attempts yet'}
             </div>
           </div>
 
