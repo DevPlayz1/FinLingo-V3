@@ -173,7 +173,7 @@ export default function App() {
 
     // Keep active session in sync with role switch
     const targetEmail = role === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local';
-    const targetName = role === 'admin' ? 'Prof. Eleanor Vance' : 'Student Scholar';
+    const targetName = role === 'admin' ? 'Prof. Dr. Anjali Sane' : 'Dev Purecha';
     setCurrentSession({
       email: targetEmail,
       role,
@@ -189,8 +189,8 @@ export default function App() {
     }
     showToast(
       role === 'admin'
-        ? 'Switched to Academic Admin Profile (Prof. Eleanor Vance)'
-        : 'Switched to College Scholar Profile (Student Scholar)',
+        ? 'Switched to Faculty Admin Profile (Prof. Dr. Anjali Sane)'
+        : 'Switched to College Scholar Profile (Dev Purecha)',
       undefined,
       'streak'
     );
@@ -355,7 +355,7 @@ export default function App() {
       roleTarget === 'admin'
         ? 'Admin Profile & Settings Restored to Defaults'
         : roleTarget === 'user'
-        ? 'Student Scholar Progress Restored to Defaults'
+        ? 'Dev Purecha Progress Restored to Defaults'
         : 'All Sample Data Restored to Defaults',
       undefined,
       'success'

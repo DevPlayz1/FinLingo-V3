@@ -41,11 +41,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lockoutCountdown, setLockoutCountdown] = useState<number | null>(null);
 
-  // Auto-fill initial tab credentials on tab switch for demo convenience
+  // Clear inputs and errors on role tab switch
   useEffect(() => {
-    const creds = selectedRoleTab === 'admin' ? INITIAL_CREDENTIALS.admin : INITIAL_CREDENTIALS.user;
-    setEmailInput(creds.email);
-    setPasswordInput(creds.defaultPassword);
+    setEmailInput('');
+    setPasswordInput('');
     setErrorMessage(null);
   }, [selectedRoleTab]);
 
@@ -74,8 +73,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     setErrorMessage(null);
     setInfoMessage(null);
 
+    // If inputs are left blank, use predefined account for the active tab seamlessly
+    const creds = selectedRoleTab === 'admin' ? INITIAL_CREDENTIALS.admin : INITIAL_CREDENTIALS.user;
+    const effectiveEmail = emailInput.trim() || creds.email;
+    const effectivePassword = passwordInput || creds.defaultPassword;
+
     try {
-      const result = await authService.login(emailInput, passwordInput, selectedRoleTab);
+      const result = await authService.login(effectiveEmail, effectivePassword, selectedRoleTab);
 
       if (result.success && result.user) {
         if (result.assignedRoleMismatch) {
@@ -99,15 +103,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  // Quick Demo fill buttons
-  const fillCredentials = (role: UserRole) => {
-    setSelectedRoleTab(role);
-    const creds = role === 'admin' ? INITIAL_CREDENTIALS.admin : INITIAL_CREDENTIALS.user;
-    setEmailInput(creds.email);
-    setPasswordInput(creds.defaultPassword);
-    setErrorMessage(null);
   };
 
   // Theme tokens
@@ -139,42 +134,11 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <div className="flex items-center gap-2">
               <span className={`font-black text-xl tracking-tight ${primaryText}`}>FinLingo</span>
               <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#E96746]/10 text-[#E96746] dark:text-[#F07856] border border-[#E96746]/20">
-                Demo Auth
+                Sign In
               </span>
             </div>
             <p className={`text-[11px] ${secondaryText}`}>Gamified Commerce &amp; Finance Academy</p>
           </div>
-        </div>
-
-        {/* Demo Credentials Quick Buttons */}
-        <div className="hidden sm:flex items-center gap-2 text-xs">
-          <span className={`text-[11px] font-medium ${secondaryText}`}>Quick Demo:</span>
-          <button
-            type="button"
-            onClick={() => fillCredentials('user')}
-            className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition cursor-pointer ${
-              selectedRoleTab === 'user'
-                ? 'bg-[#E96746] text-white border-[#E96746]'
-                : isDarkMode
-                ? 'bg-[#12233A] border-[#1E324F] text-[#C1CDDC] hover:text-[#FFF8ED]'
-                : 'bg-white border-[#EDE3D2] text-[#52647A] hover:text-[#263238]'
-            }`}
-          >
-            Fill Student
-          </button>
-          <button
-            type="button"
-            onClick={() => fillCredentials('admin')}
-            className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold transition cursor-pointer ${
-              selectedRoleTab === 'admin'
-                ? 'bg-[#E96746] text-white border-[#E96746]'
-                : isDarkMode
-                ? 'bg-[#12233A] border-[#1E324F] text-[#C1CDDC] hover:text-[#FFF8ED]'
-                : 'bg-white border-[#EDE3D2] text-[#52647A] hover:text-[#263238]'
-            }`}
-          >
-            Fill Admin
-          </button>
         </div>
       </header>
 
@@ -187,7 +151,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               Sign in to FinLingo
             </h1>
             <p className={`text-xs sm:text-sm ${secondaryText}`}>
-              Local demo authentication for verified academic or learner accounts
+              Sign in to access your learning dashboard or admin console
             </p>
           </div>
 
@@ -240,8 +204,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               )}
               <span className="font-semibold">
                 {selectedRoleTab === 'admin'
-                  ? 'Faculty Admin Account (Prof. Eleanor Vance)'
-                  : 'College Scholar Account (Student Scholar)'}
+                  ? 'Faculty Admin Account (Prof. Dr. Anjali Sane)'
+                  : 'College Scholar Account (Dev Purecha)'}
               </span>
             </div>
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10">
@@ -284,12 +248,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  required
-                  placeholder={
-                    selectedRoleTab === 'admin'
-                      ? 'admin@finlingo.local'
-                      : 'learner@finlingo.local'
-                  }
+                  placeholder="Enter email address"
                   className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${inputBg} ${cardBorder} ${primaryText}`}
                 />
               </div>
@@ -303,7 +262,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  required
                   placeholder="Enter account password"
                   className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${inputBg} ${cardBorder} ${primaryText}`}
                 />
@@ -328,9 +286,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 />
                 <span className={secondaryText}>Remember session</span>
               </label>
-              <span className={`text-[11px] ${secondaryText}`}>
-                Predefined demo accounts
-              </span>
             </div>
 
             <button
@@ -348,41 +303,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               )}
             </button>
           </form>
-
-          {/* Quick Helper Credentials Card */}
-          <div className={`p-3.5 rounded-2xl border text-xs space-y-2 ${inputBg} ${cardBorder}`}>
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-[#E96746] dark:text-[#F07856] uppercase text-[10px] tracking-wider">
-                Predefined Demo Credentials
-              </span>
-              <span className="text-[10px] opacity-75 font-semibold">Local Storage</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div
-                onClick={() => fillCredentials('user')}
-                className="p-2.5 rounded-xl border border-dashed border-[#EDE3D2] dark:border-[#1E324F] cursor-pointer hover:border-[#E96746] transition"
-                title="Click to auto-fill Student credentials"
-              >
-                <strong className="block text-emerald-600 dark:text-emerald-400">User (Scholar):</strong>
-                <span className="block truncate opacity-85 font-mono text-[10px]">{INITIAL_CREDENTIALS.user.email}</span>
-                <code className="text-[10px] block font-mono text-[#E96746] dark:text-[#F07856]">
-                  {INITIAL_CREDENTIALS.user.defaultPassword}
-                </code>
-              </div>
-
-              <div
-                onClick={() => fillCredentials('admin')}
-                className="p-2.5 rounded-xl border border-dashed border-[#EDE3D2] dark:border-[#1E324F] cursor-pointer hover:border-[#E96746] transition"
-                title="Click to auto-fill Admin credentials"
-              >
-                <strong className="block text-amber-600 dark:text-amber-400">Admin (Faculty):</strong>
-                <span className="block truncate opacity-85 font-mono text-[10px]">{INITIAL_CREDENTIALS.admin.email}</span>
-                <code className="text-[10px] block font-mono text-[#E96746] dark:text-[#F07856]">
-                  {INITIAL_CREDENTIALS.admin.defaultPassword}
-                </code>
-              </div>
-            </div>
-          </div>
         </div>
       </main>
 

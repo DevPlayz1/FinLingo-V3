@@ -209,12 +209,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // 5. Quick XP update specifically targeting Demo User (Student Scholar)
+  // 5. Quick XP update specifically targeting Demo User (Dev Purecha)
   const handleApplyDemoUserXp = () => {
     const success = dataService.setDemoUserXp(demoUserXpInput, currentRole, 'user');
     if (success) {
       onRefreshData();
-      showToast(`Student Scholar XP Updated to ${demoUserXpInput}`, demoUserXpInput, 'xp');
+      showToast(`Dev Purecha XP Updated to ${demoUserXpInput}`, demoUserXpInput, 'xp');
     }
   };
 
@@ -227,7 +227,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       onRefreshData();
       setDemoUserXpInput(0);
       setResetUserProgressModalOpen(false);
-      showToast('Student Scholar Progress Reset: 0 XP, Level 1, 0 Streak', 0, 'success');
+      showToast('Dev Purecha Progress Reset: 0 XP, Level 1, 0 Streak', 0, 'success');
     } else {
       showToast('Unauthorized: Admin role required to reset user progress', undefined, 'xp');
     }
@@ -241,17 +241,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   const handleResetStudentOnly = () => {
-    dataService.restoreDefaultData('user');
+    dataService.resetUserProgress(currentRole);
     onRefreshData();
-    setDemoUserXpInput(420);
+    setDemoUserXpInput(0);
     setResetModalOpen(false);
-    showToast('Student Scholar Progress Restored (Admin Settings Untouched)', undefined, 'success');
+    showToast('Dev Purecha Progress Reset to 0 (Admin Settings Untouched)', undefined, 'success');
   };
 
   const handleResetAll = () => {
-    dataService.restoreDefaultData('all');
+    dataService.resetAllData();
     onRefreshData();
-    setDemoUserXpInput(420);
+    setDemoUserXpInput(0);
     setResetModalOpen(false);
     showToast('All Demo Data Restored to Defaults', undefined, 'success');
   };
@@ -1323,7 +1323,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] leading-relaxed">
-                  Restores default lesson lock statuses, question edits, and sample leaderboard scores. <strong>Student Scholar progress, XP, completed lessons, and streaks are 100% preserved.</strong>
+                  Restores default lesson lock statuses, question edits, and sample leaderboard scores. <strong>Dev Purecha's progress, XP, completed lessons, and streaks are 100% preserved.</strong>
                 </p>
                 <button
                   onClick={handleResetAdminOnly}
@@ -1333,13 +1333,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </button>
               </div>
 
-              {/* Option 2: Student Scholar Progress */}
+              {/* Option 2: Dev Purecha Progress */}
               <div className="p-4 rounded-2xl border border-blue-500/30 bg-blue-500/5 space-y-2">
                 <span className="font-extrabold text-blue-600 dark:text-blue-400 text-sm block">
                   Option 2: Reset Demo Student Progress
                 </span>
                 <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] leading-relaxed">
-                  Resets the Student Scholar account back to Level 2, 420 XP, and 3-day streak. <strong>Your Admin curriculum configurations and custom questions remain untouched.</strong>
+                  Resets Dev Purecha's learning account back to Level 1, 0 XP, and 0-day streak. <strong>Your Admin curriculum configurations and custom questions remain untouched.</strong>
                 </p>
                 <button
                   onClick={handleResetStudentOnly}
@@ -1412,7 +1412,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <div className="space-y-4 text-xs sm:text-sm">
               <p className="leading-relaxed text-[#52647A] dark:text-[#C1CDDC]">
-                Please review and explicitly confirm the reset of the Student Scholar's learning record.
+                Please review and explicitly confirm the reset of Dev Purecha's learning record.
               </p>
 
               {/* Requirement 7 Mandatory Items Checklist */}

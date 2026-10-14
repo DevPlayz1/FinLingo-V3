@@ -34,7 +34,7 @@ const badgeSizeClasses = {
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
-  name = 'Student Scholar',
+  name = 'Dev Purecha',
   size = 'md',
   className = '',
   ring = true,

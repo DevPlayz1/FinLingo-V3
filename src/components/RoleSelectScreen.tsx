@@ -62,7 +62,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
 
       {/* Role Selection Cards Grid */}
       <div className="max-w-5xl mx-auto w-full py-8 sm:py-12 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-        {/* Card 1: User (Student Scholar) */}
+        {/* Card 1: User (Dev Purecha) */}
         <div
           className={`relative rounded-3xl p-6 sm:p-8 border transition-all duration-200 flex flex-col justify-between shadow-xs hover:shadow-lg ${
             isDarkMode
@@ -94,7 +94,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   Learner Profile
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#E96746]/10 text-[#E96746] dark:text-[#F07856]">
-                  Student Scholar
+                  Dev Purecha
                 </span>
               </div>
               <h2
@@ -109,7 +109,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                 }`}
               >
-                Dedicated local profile for <strong>Student Scholar</strong>. Tracks lessons, XP points, quiz history, achievements, and streaks completely isolated from admin edits.
+                Dedicated local profile for <strong>Dev Purecha</strong>. Tracks lessons, XP points, quiz history, achievements, and streaks completely isolated from admin edits.
               </p>
             </div>
 
@@ -200,7 +200,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   Administrator Profile
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                  Prof. Eleanor Vance
+                  Prof. Dr. Anjali Sane
                 </span>
               </div>
               <h2
@@ -215,7 +215,7 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
                   isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                 }`}
               >
-                Dedicated local profile for <strong>Prof. Eleanor Vance</strong>. Manages restricted content, curriculum locks, question bank edits, and administrative scores without overwriting student progress.
+                Dedicated local profile for <strong>Prof. Dr. Anjali Sane</strong>. Manages restricted content, curriculum locks, question bank edits, and administrative scores without overwriting student progress.
               </p>
             </div>
 

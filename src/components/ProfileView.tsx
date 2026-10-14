@@ -364,7 +364,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         ? 'bg-[#0B192C] border-[#1E3A5F] text-[#FFF8ED]'
                         : 'bg-[#FFF8ED] border-[#E8F0F8] text-[#263238]'
                     }`}
-                    placeholder="Student Scholar Name"
+                    placeholder="Dev Purecha"
                   />
                   <input
                     type="text"
@@ -1522,7 +1522,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#7F1D1D]">
             <span>
               {currentRole === 'admin'
-                ? 'Restore Admin profile and administrative settings to defaults? (Student Scholar learning progress, XP, and streaks will NOT be affected).'
+                ? 'Restore Admin profile and administrative settings to defaults? (Dev Purecha\'s learning progress, XP, and streaks will NOT be affected).'
                 : 'Restore your student profile, XP, quiz records, and streaks to defaults? (Admin curriculum settings will NOT be affected).'}
             </span>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">

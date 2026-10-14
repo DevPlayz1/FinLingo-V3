@@ -77,13 +77,13 @@ export const INITIAL_CREDENTIALS = {
     email: 'admin@finlingo.local',
     defaultPassword: 'Admin#2026Master',
     role: 'admin' as UserRole,
-    displayName: 'Prof. Eleanor Vance'
+    displayName: 'Prof. Dr. Anjali Sane'
   },
   user: {
     email: 'learner@finlingo.local',
     defaultPassword: 'Learner!Pass2026',
     role: 'user' as UserRole,
-    displayName: 'Student Scholar'
+    displayName: 'Dev Purecha'
   }
 };
 
@@ -166,8 +166,8 @@ class AuthService {
           [INITIAL_CREDENTIALS.admin.email.toLowerCase()]: {
             email: INITIAL_CREDENTIALS.admin.email,
             role: 'admin',
-            displayName: 'Prof. Eleanor Vance',
-            avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+            displayName: 'Prof. Dr. Anjali Sane',
+            avatar: '',
             university: 'Faculty of Commerce & Finance',
             salt: adminSalt,
             hash: adminHash,
@@ -178,8 +178,8 @@ class AuthService {
           [INITIAL_CREDENTIALS.user.email.toLowerCase()]: {
             email: INITIAL_CREDENTIALS.user.email,
             role: 'user',
-            displayName: 'Student Scholar',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+            displayName: 'Dev Purecha',
+            avatar: '',
             university: 'Columbia Business School',
             salt: userSalt,
             hash: userHash,
@@ -190,6 +190,36 @@ class AuthService {
         };
 
         safeStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(initialAccounts));
+      } else {
+        // Migrate existing accounts if they contain old display names or old avatars
+        const existingAccounts = JSON.parse(stored);
+        let updated = false;
+        const adminKey = INITIAL_CREDENTIALS.admin.email.toLowerCase();
+        const userKey = INITIAL_CREDENTIALS.user.email.toLowerCase();
+
+        if (existingAccounts[adminKey]) {
+          if (existingAccounts[adminKey].displayName !== 'Prof. Dr. Anjali Sane') {
+            existingAccounts[adminKey].displayName = 'Prof. Dr. Anjali Sane';
+            updated = true;
+          }
+          if (existingAccounts[adminKey].avatar?.includes('unsplash.com')) {
+            existingAccounts[adminKey].avatar = '';
+            updated = true;
+          }
+        }
+        if (existingAccounts[userKey]) {
+          if (existingAccounts[userKey].displayName !== 'Dev Purecha') {
+            existingAccounts[userKey].displayName = 'Dev Purecha';
+            updated = true;
+          }
+          if (existingAccounts[userKey].avatar?.includes('unsplash.com')) {
+            existingAccounts[userKey].avatar = '';
+            updated = true;
+          }
+        }
+        if (updated) {
+          safeStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(existingAccounts));
+        }
       }
       this.initialized = true;
     } catch (e) {
@@ -382,6 +412,14 @@ class AuthService {
         // Session was invalidated
         this.logout();
         return null;
+      }
+
+      if (session.role === 'admin' && session.displayName !== 'Prof. Dr. Anjali Sane') {
+        session.displayName = 'Prof. Dr. Anjali Sane';
+        safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+      } else if (session.role === 'user' && session.displayName !== 'Dev Purecha') {
+        session.displayName = 'Dev Purecha';
+        safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
       }
 
       return session;

@@ -76,78 +76,42 @@ const safeStorage = {
 // 1. CANONICAL USER (COLLEGE SCHOLAR) DEMO PROFILE
 export const USER_DEFAULT_PROFILE: UserProfile = {
   uid: 'student_user_001',
-  displayName: 'Student Scholar',
-  email: 'scholar@university.edu',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+  displayName: 'Dev Purecha',
+  email: 'learner@finlingo.local',
+  avatar: '',
   university: 'Columbia Business School',
   major: 'Commerce & Quantitative Finance',
   graduationYear: '2026',
-  level: 2,
-  levelTitle: 'Junior Analyst',
-  currentXp: 420,
-  nextLevelXp: 500,
-  streakDays: 3,
-  lastActiveDate: new Date().toISOString().split('T')[0],
-  completedLessonIds: ['acc-1', 'eco-1'],
-  bookmarkedLessonIds: ['fin-1'],
+  level: 1,
+  levelTitle: 'Intern Scholar',
+  currentXp: 0,
+  nextLevelXp: 200,
+  streakDays: 0,
+  lastActiveDate: '',
+  completedLessonIds: [],
+  bookmarkedLessonIds: [],
   quizStats: {
-    totalAnswered: 8,
-    totalCorrect: 7,
-    perfectQuizzesCount: 1
+    totalAnswered: 0,
+    totalCorrect: 0,
+    perfectQuizzesCount: 0
   },
-  lessonQuizRecords: {
-    'acc-1': {
-      lessonId: 'acc-1',
-      bestScore: 4,
-      totalQuestions: 4,
-      bestEarnedXp: 145,
-      attemptsCount: 1,
-      passed: true,
-      lastAttemptAt: Date.now() - 86400000,
-      isPerfect: true
-    },
-    'eco-1': {
-      lessonId: 'eco-1',
-      bestScore: 3,
-      totalQuestions: 4,
-      bestEarnedXp: 90,
-      attemptsCount: 1,
-      passed: true,
-      lastAttemptAt: Date.now() - 86400000,
-      isPerfect: false
-    }
-  },
+  lessonQuizRecords: {},
   trackProgress: {
-    accounting: 33,
-    economics: 33,
+    accounting: 0,
+    economics: 0,
     finance: 0
   },
-  achievements: INITIAL_ACHIEVEMENTS,
+  achievements: INITIAL_ACHIEVEMENTS.map((a) => ({ ...a, isUnlocked: false, unlockedAt: undefined })),
   weeklyActivity: {
-    Mon: 4,
-    Tue: 2,
-    Wed: 5,
-    Thu: 3,
-    Fri: 3,
-    Sat: 4,
-    Sun: 2
+    Mon: 0,
+    Tue: 0,
+    Wed: 0,
+    Thu: 0,
+    Fri: 0,
+    Sat: 0,
+    Sun: 0
   },
-  recentActivity: [
-    {
-      id: 'act-1',
-      type: 'lesson_completed',
-      title: 'Completed: Introduction to Financial Statements',
-      timestamp: Date.now() - 7200000,
-      xpEarned: 20
-    },
-    {
-      id: 'act-2',
-      type: 'quiz_passed',
-      title: 'Quiz: Introduction to Financial Statements (4/4 Correct)',
-      timestamp: Date.now() - 86400000,
-      xpEarned: 145
-    }
-  ],
+  recentActivity: [],
   privacySettings: {
     isLeaderboardPublic: true,
     showAvatarPublicly: true,
@@ -158,9 +122,9 @@ export const USER_DEFAULT_PROFILE: UserProfile = {
 // 1B. ZEROED USER PROFILE (Used when Admin executes Reset User Progress)
 export const USER_ZEROED_PROFILE: UserProfile = {
   uid: 'student_user_001',
-  displayName: 'Student Scholar',
+  displayName: 'Dev Purecha',
   email: 'learner@finlingo.local',
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+  avatar: '',
   university: 'Columbia Business School',
   major: 'Commerce & Quantitative Finance',
   graduationYear: '2026',
@@ -204,9 +168,9 @@ export const USER_ZEROED_PROFILE: UserProfile = {
 // 2. CANONICAL ADMIN (ACADEMIC ADMINISTRATOR) DEMO PROFILE
 export const ADMIN_DEFAULT_PROFILE: UserProfile = {
   uid: 'admin_user_001',
-  displayName: 'Prof. Eleanor Vance',
+  displayName: 'Prof. Dr. Anjali Sane',
   email: 'curriculum.admin@university.edu',
-  avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+  avatar: '',
   university: 'Faculty of Commerce & Finance',
   major: 'Curriculum & Academic Governance',
   graduationYear: 'Faculty / Staff',
@@ -265,44 +229,8 @@ export const ADMIN_DEFAULT_PROFILE: UserProfile = {
 
 const DEFAULT_PROFILE: UserProfile = USER_DEFAULT_PROFILE;
 
-// Seed default spaced repetition items for Student User
-export const DEFAULT_USER_SPACED_REPETITION: SpacedRepetitionItem[] = [
-  {
-    id: 'sr-eco-2-1',
-    questionId: 'q-eco-2-1',
-    lessonId: 'eco-2',
-    trackId: 'economics',
-    prompt: 'A specialty coffee shop raises its latte price by 10%, causing the quantity sold to drop by 25%. What is the price elasticity of demand (PED)?',
-    options: ['0.4 (Inelastic)', '2.5 (Elastic)', '1.0 (Unit Elastic)', '-0.4 (Perfect Inelastic)'],
-    correctOptionIndex: 1,
-    explanation: 'PED = |% change in quantity / % change in price| = 25% / 10% = 2.5. Because PED > 1, demand is elastic.',
-    repetitionLevel: 1,
-    lastReviewedAt: Date.now() - 86400000,
-    nextReviewAt: Date.now(),
-    mistakeCount: 1,
-    successfulStreak: 1
-  },
-  {
-    id: 'sr-acc-2-2',
-    questionId: 'q-acc-2-2',
-    lessonId: 'acc-2',
-    trackId: 'accounting',
-    prompt: 'Why is "Unearned / Deferred Revenue" classified as a Liability rather than Equity or Revenue?',
-    options: [
-      'Because it represents cash the business owes back to the government in taxes',
-      'Because the company has received cash but has not yet delivered the promised service or good',
-      'Because it reduces the company’s accounts receivable balance',
-      'Because it is an intangible asset that has been amortized'
-    ],
-    correctOptionIndex: 1,
-    explanation: 'The company received cash upfront but owes delivery of goods/services before recognizing income.',
-    repetitionLevel: 0,
-    lastReviewedAt: Date.now() - 3600000,
-    nextReviewAt: Date.now(),
-    mistakeCount: 2,
-    successfulStreak: 0
-  }
-];
+// Seed default spaced repetition items for Student User (0 items by default)
+export const DEFAULT_USER_SPACED_REPETITION: SpacedRepetitionItem[] = [];
 
 // Seed default spaced repetition items for Admin
 export const DEFAULT_ADMIN_SPACED_REPETITION: SpacedRepetitionItem[] = [
@@ -516,9 +444,22 @@ class DataService {
       const stored = safeStorage.getItem(storageKey);
       if (stored) {
         const parsed: UserProfile = JSON.parse(stored);
-        if (targetRole === 'user' && (parsed.displayName === 'Alex Morgan' || !parsed.displayName)) {
-          parsed.displayName = 'Student Scholar';
+        if (targetRole === 'user') {
+          if (parsed.displayName === 'Alex Morgan' || parsed.displayName === 'Student Scholar' || !parsed.displayName) {
+            parsed.displayName = 'Dev Purecha';
+          }
           parsed.email = 'learner@finlingo.local';
+          if (parsed.avatar?.includes('unsplash.com')) {
+            parsed.avatar = '';
+          }
+        }
+        if (targetRole === 'admin') {
+          if (parsed.displayName === 'Prof. Eleanor Vance' || !parsed.displayName) {
+            parsed.displayName = 'Prof. Dr. Anjali Sane';
+          }
+          if (parsed.avatar?.includes('unsplash.com')) {
+            parsed.avatar = '';
+          }
         }
         if (!parsed.privacySettings) {
           parsed.privacySettings = {
@@ -1315,24 +1256,44 @@ class DataService {
   }
 
   // --- RESTORE SAMPLE DATA & SAFE PER-PROFILE RESET UTILS ---
-  // Resets only the Student User profile, quiz records, and user spaced repetition deck.
+  // Resets only the Student User profile, quiz records, and user spaced repetition deck to clean initial state.
   // Admin-managed curriculum, custom questions, and Admin profile remain completely untouched!
   restoreUserProfile(): void {
     try {
-      safeStorage.removeItem(STORAGE_KEYS.USER_PROFILE);
-      safeStorage.removeItem(STORAGE_KEYS.USER_SPACED_REPETITION);
+      safeStorage.setItem(STORAGE_KEYS.USER_PROGRESS_ZEROED, 'true');
+      const zeroedCopy: UserProfile = JSON.parse(JSON.stringify(USER_ZEROED_PROFILE));
+      zeroedCopy.displayName = 'Dev Purecha';
+      safeStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(zeroedCopy));
+      safeStorage.setItem(STORAGE_KEYS.USER_SPACED_REPETITION, '[]');
       safeStorage.removeItem(STORAGE_KEYS.LEGACY_PROFILE);
       safeStorage.removeItem(STORAGE_KEYS.LEGACY_SPACED_REPETITION);
+
+      // Sync leaderboard entry for Dev Purecha
+      const currentLeaderboard = this.getLeaderboard();
+      const userEntry = currentLeaderboard.find((e) => e.isCurrentUser || e.id === 'lb-curr');
+      if (userEntry) {
+        userEntry.xp = 0;
+        userEntry.streak = 0;
+        userEntry.badge = 'Intern Scholar';
+        userEntry.displayName = 'Dev Purecha (You)';
+      }
+      currentLeaderboard.sort((a, b) => b.xp - a.xp);
+      currentLeaderboard.forEach((entry, idx) => {
+        entry.rank = idx + 1;
+      });
+      safeStorage.setItem(STORAGE_KEYS.LEADERBOARD, JSON.stringify(currentLeaderboard));
     } catch {
       // Ignore
     }
   }
 
   // Resets Admin profile, custom lessons, custom questions, and leaderboard overrides.
-  // Student Scholar's progress, XP, quiz history, achievements, and streaks remain completely untouched!
+  // Student Dev Purecha's progress, XP, quiz history, achievements, and streaks remain completely untouched!
   restoreAdminData(): void {
     try {
-      safeStorage.removeItem(STORAGE_KEYS.ADMIN_PROFILE);
+      const adminDefault: UserProfile = JSON.parse(JSON.stringify(ADMIN_DEFAULT_PROFILE));
+      adminDefault.displayName = 'Prof. Dr. Anjali Sane';
+      safeStorage.setItem(STORAGE_KEYS.ADMIN_PROFILE, JSON.stringify(adminDefault));
       safeStorage.removeItem(STORAGE_KEYS.ADMIN_SPACED_REPETITION);
       safeStorage.removeItem(STORAGE_KEYS.CUSTOM_LESSONS);
       safeStorage.removeItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
@@ -1357,7 +1318,7 @@ class DataService {
   }
 
   // --- REQUIREMENT 7: ADMIN-ONLY RESET USER PROGRESS ---
-  // Completely resets Student Scholar's XP to 0, Level to 1, Streak to 0,
+  // Completely resets Dev Purecha's XP to 0, Level to 1, Streak to 0,
   // Clears completed lessons, resets quiz telemetry, and relocks achievements.
   // Preserves curriculum, questions, lessons, Admin settings and content.
   // Ensures NO default XP or sample progress is restored after refresh or login.
@@ -1371,11 +1332,12 @@ class DataService {
       // 1. Mark user progress as zeroed persistently
       safeStorage.setItem(STORAGE_KEYS.USER_PROGRESS_ZEROED, 'true');
 
-      // 2. Clone pristine zeroed profile
+      // 2. Clone pristine zeroed profile and ensure display name is Dev Purecha
       const zeroedCopy: UserProfile = JSON.parse(JSON.stringify(USER_ZEROED_PROFILE));
+      zeroedCopy.displayName = 'Dev Purecha';
       safeStorage.setItem(STORAGE_KEYS.USER_PROFILE, JSON.stringify(zeroedCopy));
 
-      // 3. Clear user-specific spaced repetition deck
+      // 3. Clear user-specific spaced repetition deck (0 items due)
       safeStorage.setItem(STORAGE_KEYS.USER_SPACED_REPETITION, '[]');
 
       // 4. Remove any legacy user profile or spaced repetition keys
@@ -1389,6 +1351,7 @@ class DataService {
         userEntry.xp = 0;
         userEntry.streak = 0;
         userEntry.badge = 'Intern Scholar';
+        userEntry.displayName = 'Dev Purecha (You)';
       }
       currentLeaderboard.sort((a, b) => b.xp - a.xp);
       currentLeaderboard.forEach((entry, idx) => {
@@ -1408,8 +1371,8 @@ class DataService {
   }
 
   resetAllData(): void {
-    safeStorage.removeItem(STORAGE_KEYS.USER_PROGRESS_ZEROED);
-    this.restoreDefaultData('all');
+    this.restoreUserProfile();
+    this.restoreAdminData();
   }
 }
 

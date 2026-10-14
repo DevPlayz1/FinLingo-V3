@@ -185,7 +185,7 @@ export async function optimizeProfileImage(
 }
 
 /**
- * Extracts initials from a display name (e.g., "Student Scholar" -> "SS", "John" -> "J").
+ * Extracts initials from a display name (e.g., "Dev Purecha" -> "DP", "John" -> "J").
  */
 export function getInitials(name?: string): string {
   if (!name || !name.trim()) return 'FS'; // FinLingo Student
