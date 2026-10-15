@@ -40,6 +40,7 @@ import {
 } from '../utils/imageValidation';
 import { authService } from '../services/authService';
 import { validatePassword } from '../utils/passwordPolicy';
+import { eligibilityService } from '../services/eligibilityService';
 
 interface ProfileViewProps {
   userProfile: UserProfile;
@@ -51,6 +52,7 @@ interface ProfileViewProps {
   onResetData: () => void;
   onOpenLegalCenter: (docId?: LegalDocId) => void;
   onOpenConsentModal?: () => void;
+  onRevokeAgeEligibility?: () => void;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -65,6 +67,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onResetData,
   onOpenLegalCenter,
   onOpenConsentModal,
+  onRevokeAgeEligibility,
   isDarkMode = false,
   onToggleDarkMode
 }) => {
@@ -109,6 +112,21 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const levelProgress = calculateLevelProgress(userProfile.currentXp);
+
+  // Age Eligibility State & Handler
+  const [showRevokeAgeConfirm, setShowRevokeAgeConfirm] = useState(false);
+  const activeEmail = accountEmail || (currentRole === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local');
+  const activeRole: UserRole = currentRole || 'user';
+  const eligibilityRecord = eligibilityService.getEligibility(activeEmail, activeRole);
+
+  const handleRevokeEligibility = () => {
+    eligibilityService.revokeEligibility(activeEmail, activeRole);
+    setShowRevokeAgeConfirm(false);
+    triggerSuccessToast('13+ Age Eligibility revoked. Returning to verification gate...');
+    if (onRevokeAgeEligibility) {
+      onRevokeAgeEligibility();
+    }
+  };
 
   const handleSaveProfile = () => {
     onUpdateProfile({
@@ -1227,6 +1245,106 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </button>
           )}
         </div>
+      </div>
+
+      {/* 13+ Age Eligibility Verification Card (Mandatory Requirement) */}
+      <div
+        className={`p-6 rounded-2xl border space-y-4 transition-colors ${
+          isDarkMode
+            ? 'bg-[#132238] border-[#1E3A5F]'
+            : 'bg-white border-[#E8F0F8]'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3
+              className={`font-extrabold text-sm sm:text-base flex items-center gap-2 ${
+                isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+              }`}
+            >
+              <Shield className="w-4 h-4 text-[#E96746] dark:text-[#F07856]" />
+              <span>Age Eligibility (13+ Gate)</span>
+            </h3>
+            <p
+              className={`text-xs sm:text-sm mt-0.5 ${
+                isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
+              }`}
+            >
+              Academic digital safety standard: FinLingo is strictly restricted to users aged 13 and older. Full date of birth or government IDs are never collected.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {eligibilityRecord.isConfirmed ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>13+ eligibility confirmed</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                <AlertCircle className="w-3.5 h-3.5" />
+                <span>Not confirmed</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div
+          className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
+            isDarkMode ? 'bg-[#0B1728]/50 border-[#1E324F]' : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          <div>
+            <div className="font-semibold">
+              Status for {userProfile.displayName} ({activeEmail}):
+            </div>
+            <div className="opacity-75 text-[11px] mt-0.5">
+              {eligibilityRecord.isConfirmed
+                ? `Confirmed on ${new Date(eligibilityRecord.confirmedAt || Date.now()).toLocaleDateString()} • Account Role: ${activeRole === 'admin' ? 'Faculty Admin' : 'College Scholar'}`
+                : 'Pending affirmative 13+ confirmation.'}
+            </div>
+          </div>
+
+          {eligibilityRecord.isConfirmed && (
+            <button
+              type="button"
+              onClick={() => setShowRevokeAgeConfirm(true)}
+              className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 border border-rose-500/30 hover:bg-rose-500/10 transition cursor-pointer shrink-0"
+            >
+              Revoke 13+ Confirmation
+            </button>
+          )}
+        </div>
+
+        {showRevokeAgeConfirm && (
+          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-700 dark:text-rose-300 space-y-3 animate-in fade-in duration-200">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block">Revoke Age Eligibility Confirmation?</strong>
+                <span>
+                  Revoking your age confirmation will immediately lock out access to all educational modules, quizzes, spaced review, and profile content until 13+ eligibility is re-confirmed.
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRevokeAgeConfirm(false)}
+                className="px-3 py-1 rounded-lg border font-semibold hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRevokeEligibility}
+                className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer transition"
+              >
+                Yes, Revoke Confirmation
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Account Security & Password Management (Requirements 2 & 3) */}

@@ -18,9 +18,11 @@ import { AffirmativeConsentModal } from './components/AffirmativeConsentModal';
 import { RestrictedAccessModal } from './components/RestrictedAccessModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AuthScreen } from './components/AuthScreen';
+import { AgeGateScreen } from './components/AgeGateScreen';
 
 import { dataService } from './services/dataService';
 import { authService, ActiveSession } from './services/authService';
+import { eligibilityService } from './services/eligibilityService';
 import {
   ActiveTab,
   UserProfile,
@@ -90,6 +92,18 @@ export default function App() {
   const [securityNotice, setSecurityNotice] = useState<string | null>(null);
   const [loginInitialTab, setLoginInitialTab] = useState<UserRole>('user');
 
+  // Mandatory 13+ Age Eligibility State (Maintained per-account, separate from learning progress)
+  const [isAgeEligible, setIsAgeEligible] = useState<boolean>(() => {
+    const session = authService.getCurrentSession();
+    if (!session) return false;
+    return eligibilityService.getEligibility(session.email, session.role).isConfirmed;
+  });
+  const [isUnder13Flag, setIsUnder13Flag] = useState<boolean>(() => {
+    const session = authService.getCurrentSession();
+    if (!session) return false;
+    return Boolean(eligibilityService.getEligibility(session.email, session.role).isUnder13);
+  });
+
   // Strict role derivation: role MUST come directly from the cryptographically verified session
   const currentRole: UserRole = currentSession ? currentSession.role : 'user';
 
@@ -100,6 +114,8 @@ export default function App() {
     authService.logout();
     dataService.setRole(null);
     setCurrentSession(null);
+    setIsAgeEligible(false);
+    setIsUnder13Flag(false);
     setRestrictedLessonModal(null);
     setActiveLessonModal(null);
     setActiveQuizModal(null);
@@ -107,7 +123,7 @@ export default function App() {
     setLoginInitialTab('admin');
     setSecurityNotice(reason);
 
-    if (window.location.hash === '#admin') {
+    if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
     }
     setActiveTab('dashboard');
@@ -120,9 +136,20 @@ export default function App() {
       const rawHash = window.location.hash.replace('#', '').toLowerCase();
       if (!rawHash) return;
 
+      const session = authService.getCurrentSession();
+      if (!session) return;
+
+      const eligibility = eligibilityService.getEligibility(session.email, session.role);
+      if (!eligibility.isConfirmed) {
+        // Enforce 13+ Age Gate: Do not allow hash navigation if age eligibility is unconfirmed
+        if (window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        return;
+      }
+
       if (rawHash === 'admin') {
-        const session = authService.getCurrentSession();
-        if (!session || session.role !== 'admin') {
+        if (session.role !== 'admin') {
           handleUnauthorizedAdminAttempt(
             'Security Enforcement: Direct navigation to Admin route from non-admin session is prohibited. Session cleared. Administrator credentials required.'
           );
@@ -139,13 +166,18 @@ export default function App() {
     window.addEventListener('popstate', handleHashSync);
 
     // Initial check on mount
-    const initialHash = window.location.hash.replace('#', '').toLowerCase();
-    if (initialHash === 'admin') {
-      const session = authService.getCurrentSession();
-      if (!session || session.role !== 'admin') {
-        handleUnauthorizedAdminAttempt(
-          'Security Enforcement: Admin route requires fresh Administrator authentication.'
-        );
+    const session = authService.getCurrentSession();
+    if (session) {
+      const eligibility = eligibilityService.getEligibility(session.email, session.role);
+      if (!eligibility.isConfirmed && window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname);
+      } else {
+        const initialHash = window.location.hash.replace('#', '').toLowerCase();
+        if (initialHash === 'admin' && session.role !== 'admin') {
+          handleUnauthorizedAdminAttempt(
+            'Security Enforcement: Admin route requires fresh Administrator authentication.'
+          );
+        }
       }
     }
 
@@ -229,6 +261,12 @@ export default function App() {
     dataService.setRole(session.role);
     setSecurityNotice(null);
     setIsAuthModalOpen(false);
+
+    // Sync age eligibility state for this local account and role
+    const elRec = eligibilityService.getEligibility(session.email, session.role);
+    setIsAgeEligible(elRec.isConfirmed);
+    setIsUnder13Flag(Boolean(elRec.isUnder13));
+
     refreshState();
     showToast(
       `Welcome, ${session.displayName}! Signed in as ${session.role === 'admin' ? 'Faculty Admin' : 'College Scholar'}.`,
@@ -242,8 +280,10 @@ export default function App() {
     dataService.setRole(null);
     setCurrentSession(null);
     setSecurityNotice(null);
+    setIsAgeEligible(false);
+    setIsUnder13Flag(false);
     setLoginInitialTab(currentRole === 'admin' ? 'admin' : 'user');
-    if (window.location.hash === '#admin') {
+    if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
     }
     setActiveTab('dashboard');
@@ -251,6 +291,11 @@ export default function App() {
   };
 
   const handleSetActiveTab = (tab: ActiveTab) => {
+    // 13+ Age Eligibility check: Block all tabs if eligibility is not affirmatively confirmed
+    if (!currentSession || !isAgeEligible) {
+      return;
+    }
+
     // Application-logic level protection against Admin route access
     if (tab === 'admin') {
       const session = authService.getCurrentSession();
@@ -265,8 +310,10 @@ export default function App() {
     window.location.hash = tab;
   };
 
-  // Lesson actions (Protected by RBAC check: unauthorized admin lesson access terminates user session)
+  // Lesson actions (Protected by 13+ Age Gate and RBAC check)
   const handleOpenLesson = (lesson: Lesson) => {
+    if (!currentSession || !isAgeEligible) return;
+
     if (lesson.isAdminOnly && currentRole !== 'admin') {
       handleUnauthorizedAdminAttempt(
         `Security Enforcement: Attempted access to Admin-only academic module ("${lesson.title}"). Active session terminated. Administrator credentials required.`
@@ -276,8 +323,10 @@ export default function App() {
     setActiveLessonModal(lesson);
   };
 
-  // Quiz actions (Protected by RBAC check: unauthorized admin quiz access terminates user session)
+  // Quiz actions (Protected by 13+ Age Gate and RBAC check)
   const handleStartQuiz = (lesson: Lesson) => {
+    if (!currentSession || !isAgeEligible) return;
+
     if (lesson.isAdminOnly && currentRole !== 'admin') {
       handleUnauthorizedAdminAttempt(
         `Security Enforcement: Attempted quiz on Admin-only academic module ("${lesson.title}"). Active session terminated. Administrator credentials required.`
@@ -458,6 +507,55 @@ export default function App() {
     );
   }
 
+  // Mandatory 13+ Age Eligibility Gate: Block all app access if eligibility is unconfirmed
+  if (!isAgeEligible) {
+    return (
+      <div
+        className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
+          isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
+        }`}
+      >
+        <AgeGateScreen
+          userEmail={currentSession.email}
+          userName={currentSession.displayName}
+          userRole={currentRole}
+          isDarkMode={isDarkMode}
+          initialUnder13={isUnder13Flag}
+          onConfirmEligibility={() => {
+            eligibilityService.confirmEligibility(currentSession.email, currentRole);
+            setIsAgeEligible(true);
+            setIsUnder13Flag(false);
+            showToast('13+ Age Eligibility Confirmed. Welcome to FinLingo!', undefined, 'success');
+          }}
+          onMarkUnder13={() => {
+            eligibilityService.markUnder13(currentSession.email, currentRole);
+            setIsAgeEligible(false);
+            setIsUnder13Flag(true);
+          }}
+          onClearUnder13={() => {
+            eligibilityService.clearUnder13Flag(currentSession.email, currentRole);
+            setIsUnder13Flag(false);
+          }}
+          onLogout={handleLogout}
+        />
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+            <div
+              className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 ${
+                isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+              }`}
+            >
+              <div className="w-8 h-8 rounded-xl bg-[#E96746] text-white flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+              <span className="font-bold text-xs">{toastMessage.title}</span>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
@@ -542,6 +640,10 @@ export default function App() {
             onResetData={handleResetData}
             onOpenLegalCenter={handleOpenLegalCenter}
             onOpenConsentModal={() => setIsConsentModalOpen(true)}
+            onRevokeAgeEligibility={() => {
+              setIsAgeEligible(false);
+              showToast('13+ Age Eligibility revoked. Please reaffirm to continue.', undefined, 'info');
+            }}
             isDarkMode={isDarkMode}
             onToggleDarkMode={handleToggleDarkMode}
           />

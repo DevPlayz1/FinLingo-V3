@@ -50,6 +50,11 @@ export interface QuizQuestion {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   xpPoints: number;
   topicTag: string;
+  source?: 'original' | 'admin';
+  isPublished?: boolean;
+  isDeleted?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface SpacedRepetitionItem {

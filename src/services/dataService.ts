@@ -34,6 +34,7 @@ const STORAGE_KEYS = {
   ROLE: 'finlingo_demo_role_v1',
   CUSTOM_LESSONS: 'finlingo_custom_lessons_v1',
   CUSTOM_QUESTIONS: 'finlingo_custom_questions_v1',
+  ADMIN_CREATED_QUESTIONS: 'finlingo_admin_created_questions_v1',
   ADMIN_SETTINGS: 'finlingo_admin_settings_v1',
   PROFILE: 'finlingo_user_profile_v1',
   USER_PROGRESS_ZEROED: 'finlingo_user_progress_zeroed_v1'
@@ -386,48 +387,272 @@ class DataService {
     }
   }
 
-  // --- QUIZ QUESTIONS REPOSITORY (200+ Bank with Admin Editing Support) ---
-  getQuestions(): QuizQuestion[] {
-    const base: QuizQuestion[] = JSON.parse(JSON.stringify(QUIZ_QUESTIONS));
+  // --- QUIZ QUESTIONS REPOSITORY (Unified 200+ Bank with Admin Custom Questions & Full Gamification Integration) ---
+
+  private getAdminCreatedQuestions(): QuizQuestion[] {
     try {
-      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+      const stored = safeStorage.getItem(STORAGE_KEYS.ADMIN_CREATED_QUESTIONS);
       if (stored) {
-        const overrides: Record<string, Partial<QuizQuestion>> = JSON.parse(stored);
-        base.forEach(q => {
-          if (overrides[q.id]) {
-            Object.assign(q, overrides[q.id]);
-          }
-        });
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.map((q: any) => ({
+            ...q,
+            source: 'admin' as const,
+            isPublished: q.isPublished !== false,
+            isDeleted: Boolean(q.isDeleted)
+          }));
+        }
       }
     } catch {
       // Fallback
     }
-    return base;
+    return [];
   }
 
-  getQuestionsByLesson(lessonId: string): QuizQuestion[] {
-    return this.getQuestions().filter(q => q.lessonId === lessonId);
+  private saveAdminCreatedQuestions(questions: QuizQuestion[]): void {
+    try {
+      safeStorage.setItem(STORAGE_KEYS.ADMIN_CREATED_QUESTIONS, JSON.stringify(questions));
+    } catch (e) {
+      console.error('Failed to save admin created questions:', e);
+    }
   }
 
-  getQuestionsByTrack(trackId: TrackId): QuizQuestion[] {
-    return this.getQuestions().filter(q => q.trackId === trackId);
+  private getQuestionOverrides(): Record<string, Partial<QuizQuestion>> {
+    try {
+      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {
+      // Fallback
+    }
+    return {};
   }
 
-  // Admin action: Edit question details
+  getQuestions(options?: {
+    trackId?: TrackId | 'all';
+    lessonId?: string;
+    includeUnpublished?: boolean;
+    difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'all';
+    source?: 'all' | 'original' | 'admin';
+  }): QuizQuestion[] {
+    // 1. Load canonical 200-question base bank (never mutated in place)
+    const base: QuizQuestion[] = JSON.parse(JSON.stringify(QUIZ_QUESTIONS)).map((q: QuizQuestion) => ({
+      ...q,
+      source: 'original' as const,
+      isPublished: true,
+      isDeleted: false
+    }));
+
+    // 2. Apply admin overrides to base questions if any
+    const overrides = this.getQuestionOverrides();
+    base.forEach(q => {
+      if (overrides[q.id]) {
+        Object.assign(q, overrides[q.id]);
+      }
+    });
+
+    // 3. Load Admin-created custom questions
+    const adminCustom = this.getAdminCreatedQuestions();
+
+    // 4. Merge into unified collection (Admin custom questions take precedence on ID collision)
+    const questionMap = new Map<string, QuizQuestion>();
+    base.forEach(q => questionMap.set(q.id, q));
+    adminCustom.forEach(q => questionMap.set(q.id, q));
+
+    let unified = Array.from(questionMap.values());
+
+    // 5. Exclude deleted questions
+    unified = unified.filter(q => !q.isDeleted);
+
+    // 6. Exclude unpublished questions unless explicitly requested (e.g. by Admin Panel)
+    if (!options?.includeUnpublished) {
+      unified = unified.filter(q => q.isPublished !== false);
+    }
+
+    // 7. Track / Category filter
+    if (options?.trackId && options.trackId !== 'all') {
+      unified = unified.filter(q => q.trackId === options.trackId);
+    }
+
+    // 8. Lesson filter
+    if (options?.lessonId) {
+      unified = unified.filter(q => q.lessonId === options.lessonId);
+    }
+
+    // 9. Difficulty filter
+    if (options?.difficulty && options.difficulty !== 'all') {
+      unified = unified.filter(q => q.difficulty === options.difficulty);
+    }
+
+    // 10. Source filter
+    if (options?.source && options.source !== 'all') {
+      unified = unified.filter(q => q.source === options.source);
+    }
+
+    return unified;
+  }
+
+  getQuestionsByLesson(lessonId: string, includeUnpublished = false): QuizQuestion[] {
+    return this.getQuestions({ lessonId, includeUnpublished });
+  }
+
+  getQuestionsByTrack(trackId: TrackId, includeUnpublished = false): QuizQuestion[] {
+    return this.getQuestions({ trackId, includeUnpublished });
+  }
+
+  getQuestionById(questionId: string): QuizQuestion | undefined {
+    return this.getQuestions({ includeUnpublished: true }).find(q => q.id === questionId);
+  }
+
+  // Admin action: Create brand-new custom question
+  createCustomQuestion(
+    questionData: {
+      lessonId: string;
+      trackId: TrackId;
+      prompt: string;
+      options: string[];
+      correctOptionIndex: number;
+      explanation: string;
+      difficulty: 'beginner' | 'intermediate' | 'advanced';
+      xpPoints: number;
+      topicTag: string;
+      scenario?: string;
+      isPublished?: boolean;
+    },
+    role: UserRole
+  ): { success: boolean; question?: QuizQuestion; error?: string } {
+    if (role !== 'admin') {
+      return { success: false, error: 'Unauthorized: Only faculty administrators can create custom quiz questions.' };
+    }
+
+    const trimmedPrompt = questionData.prompt?.trim() || '';
+    if (trimmedPrompt.length < 5) {
+      return { success: false, error: 'Question prompt must be at least 5 characters long.' };
+    }
+
+    const cleanedOptions = (questionData.options || []).map(o => (typeof o === 'string' ? o.trim() : '')).filter(Boolean);
+    if (cleanedOptions.length < 2) {
+      return { success: false, error: 'Please provide at least 2 non-empty answer options.' };
+    }
+
+    if (
+      typeof questionData.correctOptionIndex !== 'number' ||
+      questionData.correctOptionIndex < 0 ||
+      questionData.correctOptionIndex >= cleanedOptions.length
+    ) {
+      return { success: false, error: 'Please select a valid correct answer option index.' };
+    }
+
+    const trimmedExplanation = questionData.explanation?.trim() || '';
+    if (trimmedExplanation.length < 5) {
+      return { success: false, error: 'Please provide a clear explanatory rationale (at least 5 characters).' };
+    }
+
+    const validTracks: TrackId[] = ['accounting', 'economics', 'finance'];
+    if (!validTracks.includes(questionData.trackId)) {
+      return { success: false, error: 'Invalid learning track category selected.' };
+    }
+
+    // Stable, collision-resistant custom ID
+    const stableId = `cq-${questionData.trackId.slice(0, 3)}-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+    const newQuestion: QuizQuestion = {
+      id: stableId,
+      lessonId: questionData.lessonId || `${questionData.trackId.slice(0, 3)}-1`,
+      trackId: questionData.trackId,
+      prompt: trimmedPrompt,
+      scenario: questionData.scenario?.trim(),
+      options: cleanedOptions,
+      correctOptionIndex: questionData.correctOptionIndex,
+      explanation: trimmedExplanation,
+      difficulty: questionData.difficulty || 'intermediate',
+      xpPoints: Math.max(5, Math.min(100, Number(questionData.xpPoints) || 20)),
+      topicTag: questionData.topicTag?.trim() || 'General Business',
+      source: 'admin',
+      isPublished: questionData.isPublished !== false,
+      isDeleted: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    const existingAdminQuestions = this.getAdminCreatedQuestions();
+    // Prepend so the newest appears first
+    existingAdminQuestions.unshift(newQuestion);
+    this.saveAdminCreatedQuestions(existingAdminQuestions);
+
+    return { success: true, question: newQuestion };
+  }
+
+  // Admin action: Edit question details (supports both custom and original questions)
   updateQuestion(questionId: string, updates: Partial<QuizQuestion>, role: UserRole): boolean {
     if (role !== 'admin') {
       console.warn('RBAC Violation: Non-admin attempted to edit question');
       return false;
     }
+
+    const adminQuestions = this.getAdminCreatedQuestions();
+    const adminIndex = adminQuestions.findIndex(q => q.id === questionId);
+
+    if (adminIndex > -1) {
+      // Update custom question directly
+      adminQuestions[adminIndex] = {
+        ...adminQuestions[adminIndex],
+        ...updates,
+        updatedAt: Date.now()
+      };
+      this.saveAdminCreatedQuestions(adminQuestions);
+      return true;
+    }
+
+    // Otherwise it's an original base question override
     try {
-      const stored = safeStorage.getItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
-      const overrides: Record<string, Partial<QuizQuestion>> = stored ? JSON.parse(stored) : {};
-      overrides[questionId] = { ...(overrides[questionId] || {}), ...updates };
+      const overrides = this.getQuestionOverrides();
+      overrides[questionId] = { ...(overrides[questionId] || {}), ...updates, updatedAt: Date.now() };
       safeStorage.setItem(STORAGE_KEYS.CUSTOM_QUESTIONS, JSON.stringify(overrides));
       return true;
     } catch {
       return false;
     }
+  }
+
+  // Admin action: Toggle publish/draft state
+  togglePublishQuestion(questionId: string, role: UserRole): boolean {
+    if (role !== 'admin') return false;
+
+    const adminQuestions = this.getAdminCreatedQuestions();
+    const adminIndex = adminQuestions.findIndex(q => q.id === questionId);
+
+    if (adminIndex > -1) {
+      const current = adminQuestions[adminIndex].isPublished !== false;
+      adminQuestions[adminIndex].isPublished = !current;
+      adminQuestions[adminIndex].updatedAt = Date.now();
+      this.saveAdminCreatedQuestions(adminQuestions);
+      return true;
+    }
+
+    // If original question, toggle override
+    const currentQ = this.getQuestions({ includeUnpublished: true }).find(q => q.id === questionId);
+    const currentPub = currentQ?.isPublished !== false;
+    return this.updateQuestion(questionId, { isPublished: !currentPub }, role);
+  }
+
+  // Admin action: Delete custom question (or unpublish/archive original question)
+  deleteQuestion(questionId: string, role: UserRole): boolean {
+    if (role !== 'admin') return false;
+
+    const adminQuestions = this.getAdminCreatedQuestions();
+    const adminIndex = adminQuestions.findIndex(q => q.id === questionId);
+
+    if (adminIndex > -1) {
+      // Remove permanently from custom questions list
+      const updated = adminQuestions.filter(q => q.id !== questionId);
+      this.saveAdminCreatedQuestions(updated);
+      return true;
+    }
+
+    // For original questions, mark as deleted/unpublished in overrides so it won't be served
+    return this.updateQuestion(questionId, { isPublished: false, isDeleted: true }, role);
   }
 
   // --- USER PROFILE REPOSITORY (Maintains separate Admin & User local demo profiles) ---
@@ -1248,6 +1473,7 @@ class DataService {
         STORAGE_KEYS.ROLE,
         STORAGE_KEYS.CUSTOM_LESSONS,
         STORAGE_KEYS.CUSTOM_QUESTIONS,
+        STORAGE_KEYS.ADMIN_CREATED_QUESTIONS,
         STORAGE_KEYS.ADMIN_SETTINGS,
         'finlingo_theme_mode'
       ]
@@ -1298,6 +1524,7 @@ class DataService {
       safeStorage.removeItem(STORAGE_KEYS.ADMIN_SPACED_REPETITION);
       safeStorage.removeItem(STORAGE_KEYS.CUSTOM_LESSONS);
       safeStorage.removeItem(STORAGE_KEYS.CUSTOM_QUESTIONS);
+      safeStorage.removeItem(STORAGE_KEYS.ADMIN_CREATED_QUESTIONS);
       safeStorage.removeItem(STORAGE_KEYS.ADMIN_SETTINGS);
       safeStorage.removeItem(STORAGE_KEYS.LEADERBOARD);
     } catch {

@@ -17,7 +17,11 @@ import {
   Plus,
   Flame,
   Award,
-  ArrowRight
+  ArrowRight,
+  Trash2,
+  Eye,
+  EyeOff,
+  Check
 } from 'lucide-react';
 import {
   UserRole,
@@ -102,7 +106,39 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Questions tab state
   const [questionSearch, setQuestionSearch] = useState('');
   const [questionTrackFilter, setQuestionTrackFilter] = useState<'all' | TrackId>('all');
+  const [questionSourceFilter, setQuestionSourceFilter] = useState<'all' | 'admin' | 'original'>('all');
+  const [questionStatusFilter, setQuestionStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
+  const [isCreateQuestionOpen, setIsCreateQuestionOpen] = useState(false);
+  const [createFormError, setCreateFormError] = useState<string | null>(null);
+  const [questionToDelete, setQuestionToDelete] = useState<QuizQuestion | null>(null);
+
+  // New question form state
+  const [newQuestionForm, setNewQuestionForm] = useState<{
+    trackId: TrackId;
+    lessonId: string;
+    topicTag: string;
+    difficulty: 'beginner' | 'intermediate' | 'advanced';
+    xpPoints: number;
+    prompt: string;
+    scenario: string;
+    options: string[];
+    correctOptionIndex: number;
+    explanation: string;
+    isPublished: boolean;
+  }>({
+    trackId: 'accounting',
+    lessonId: 'acc-1',
+    topicTag: 'Financial Statements',
+    difficulty: 'intermediate',
+    xpPoints: 20,
+    prompt: '',
+    scenario: '',
+    options: ['', '', '', ''],
+    correctOptionIndex: 0,
+    explanation: '',
+    isPublished: true
+  });
 
   // Leaderboard edit state
   const [editingEntry, setEditingEntry] = useState<LeaderboardEntry | null>(null);
@@ -151,19 +187,128 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     }
   };
 
-  // 3. Save edited question
+  // 3A. Toggle publish / draft state for a question
+  const handleTogglePublishQuestion = (question: QuizQuestion) => {
+    const success = dataService.togglePublishQuestion(question.id, currentRole);
+    if (success) {
+      onRefreshData();
+      const newStatus = question.isPublished === false ? 'Published & Live' : 'Moved to Drafts';
+      showToast(`Question ${newStatus}`, undefined, 'success');
+    } else {
+      showToast('Error updating question status', undefined, 'info');
+    }
+  };
+
+  // 3B. Delete question
+  const handleConfirmDeleteQuestion = () => {
+    if (!questionToDelete) return;
+    const success = dataService.deleteQuestion(questionToDelete.id, currentRole);
+    if (success) {
+      if (editingQuestion?.id === questionToDelete.id) {
+        setEditingQuestion(null);
+      }
+      setQuestionToDelete(null);
+      onRefreshData();
+      showToast(
+        questionToDelete.source === 'admin'
+          ? 'Custom Question Deleted'
+          : 'Question Archived from Student Quizzes',
+        undefined,
+        'success'
+      );
+    } else {
+      showToast('Error deleting question', undefined, 'info');
+    }
+  };
+
+  // 3C. Create brand-new custom question
+  const handleCreateCustomQuestion = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreateFormError(null);
+
+    // Validation
+    if (newQuestionForm.prompt.trim().length < 5) {
+      setCreateFormError('Question prompt must be at least 5 characters long.');
+      return;
+    }
+    const cleanOptions = newQuestionForm.options.map((o) => o.trim()).filter(Boolean);
+    if (cleanOptions.length < 2) {
+      setCreateFormError('Please provide at least 2 distinct answer options.');
+      return;
+    }
+    if (newQuestionForm.correctOptionIndex < 0 || newQuestionForm.correctOptionIndex >= cleanOptions.length) {
+      setCreateFormError('Please select a valid correct answer option.');
+      return;
+    }
+    if (newQuestionForm.explanation.trim().length < 5) {
+      setCreateFormError('Please enter an explanatory rationale for student feedback (at least 5 characters).');
+      return;
+    }
+
+    const result = dataService.createCustomQuestion(
+      {
+        trackId: newQuestionForm.trackId,
+        lessonId: newQuestionForm.lessonId,
+        topicTag: newQuestionForm.topicTag.trim() || 'General Business',
+        difficulty: newQuestionForm.difficulty,
+        xpPoints: Number(newQuestionForm.xpPoints) || 20,
+        prompt: newQuestionForm.prompt.trim(),
+        scenario: newQuestionForm.scenario.trim() || undefined,
+        options: cleanOptions,
+        correctOptionIndex: newQuestionForm.correctOptionIndex,
+        explanation: newQuestionForm.explanation.trim(),
+        isPublished: newQuestionForm.isPublished
+      },
+      currentRole
+    );
+
+    if (result.success) {
+      setIsCreateQuestionOpen(false);
+      setNewQuestionForm({
+        trackId: 'accounting',
+        lessonId: 'acc-1',
+        topicTag: 'Financial Statements',
+        difficulty: 'intermediate',
+        xpPoints: 20,
+        prompt: '',
+        scenario: '',
+        options: ['', '', '', ''],
+        correctOptionIndex: 0,
+        explanation: '',
+        isPublished: true
+      });
+      onRefreshData();
+      showToast(
+        newQuestionForm.isPublished ? 'Custom Question Published & Live for Quizzes!' : 'Custom Question Saved as Draft',
+        newQuestionForm.xpPoints,
+        'xp'
+      );
+    } else {
+      setCreateFormError(result.error || 'Failed to create question');
+    }
+  };
+
+  // 3D. Save edited question
   const handleSaveQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingQuestion) return;
+    const cleanOptions = editingQuestion.options.map((o) => o.trim()).filter(Boolean);
+    if (cleanOptions.length < 2) {
+      showToast('Error: At least 2 answer options are required', undefined, 'info');
+      return;
+    }
     const success = dataService.updateQuestion(
       editingQuestion.id,
       {
-        prompt: editingQuestion.prompt,
-        options: editingQuestion.options,
-        correctOptionIndex: Number(editingQuestion.correctOptionIndex),
-        explanation: editingQuestion.explanation,
+        prompt: editingQuestion.prompt.trim(),
+        options: cleanOptions,
+        correctOptionIndex: Math.min(Number(editingQuestion.correctOptionIndex), cleanOptions.length - 1),
+        explanation: editingQuestion.explanation.trim(),
         xpPoints: Number(editingQuestion.xpPoints),
-        difficulty: editingQuestion.difficulty
+        difficulty: editingQuestion.difficulty,
+        topicTag: editingQuestion.topicTag,
+        scenario: editingQuestion.scenario,
+        isPublished: editingQuestion.isPublished !== false
       },
       currentRole
     );
@@ -248,16 +393,35 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     lessonTrackFilter === 'all' ? true : l.trackId === lessonTrackFilter
   );
 
-  // All 200+ questions
-  const allQuestions = dataService.getQuestions();
+  // All questions (include unpublished and custom questions for Admin view)
+  const allQuestions = dataService.getQuestions({ includeUnpublished: true });
   const filteredQuestions = allQuestions.filter((q) => {
     const matchesTrack = questionTrackFilter === 'all' ? true : q.trackId === questionTrackFilter;
+    const matchesSource =
+      questionSourceFilter === 'all'
+        ? true
+        : questionSourceFilter === 'admin'
+        ? q.source === 'admin'
+        : q.source !== 'admin';
+    const matchesStatus =
+      questionStatusFilter === 'all'
+        ? true
+        : questionStatusFilter === 'published'
+        ? q.isPublished !== false
+        : q.isPublished === false;
+    const query = questionSearch.toLowerCase().trim();
     const matchesSearch =
-      q.prompt.toLowerCase().includes(questionSearch.toLowerCase()) ||
-      q.explanation.toLowerCase().includes(questionSearch.toLowerCase()) ||
-      q.topicTag.toLowerCase().includes(questionSearch.toLowerCase());
-    return matchesTrack && matchesSearch;
+      !query ||
+      q.prompt.toLowerCase().includes(query) ||
+      q.explanation.toLowerCase().includes(query) ||
+      q.topicTag.toLowerCase().includes(query) ||
+      q.id.toLowerCase().includes(query) ||
+      q.lessonId.toLowerCase().includes(query);
+    return matchesTrack && matchesSource && matchesStatus && matchesSearch;
   });
+
+  const customQuestionCount = allQuestions.filter((q) => q.source === 'admin').length;
+  const draftQuestionCount = allQuestions.filter((q) => q.isPublished === false).length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -535,49 +699,87 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      {/* TAB 2: QUESTION BANK (200+ ITEMS) */}
+      {/* TAB 2: QUESTION BANK & CURRICULUM AUTHORING */}
       {adminTab === 'questions' && (
         <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h2
-                className={`text-xl font-black ${
-                  isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
-                }`}
-              >
-                Comprehensive 200+ Question Bank
-              </h2>
+              <div className="flex items-center gap-2">
+                <h2
+                  className={`text-xl font-black ${
+                    isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
+                  }`}
+                >
+                  Question Bank &amp; Curriculum Authoring
+                </h2>
+                {customQuestionCount > 0 && (
+                  <span className="text-[11px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                    {customQuestionCount} Custom
+                  </span>
+                )}
+              </div>
               <p
-                className={`text-xs sm:text-sm ${
+                className={`text-xs sm:text-sm mt-0.5 ${
                   isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
                 }`}
               >
-                Search and adjust quiz questions, options, difficulty ratings, and point values.
+                Create, edit, publish, or archive questions. Admin-created custom questions automatically integrate into Student quizzes, scoring, Spaced Review, and career leaderboards.
               </p>
             </div>
 
-            {/* Search & Track filter */}
-            <div className="flex flex-wrap items-center gap-2">
-              <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs ${
-                  isDarkMode ? 'bg-[#12233A] border-[#1E324F]' : 'bg-white border-[#EDE3D2]'
-                }`}
-              >
-                <Search className="w-3.5 h-3.5 text-[#52647A] dark:text-[#C1CDDC]" />
-                <input
-                  type="text"
-                  placeholder="Search questions..."
-                  value={questionSearch}
-                  onChange={(e) => setQuestionSearch(e.target.value)}
-                  className="bg-transparent focus:outline-hidden text-xs w-40 sm:w-52"
-                />
-              </div>
+            {/* Create Custom Question Button */}
+            <button
+              onClick={() => {
+                setCreateFormError(null);
+                setIsCreateQuestionOpen(true);
+              }}
+              className="px-4 py-2.5 rounded-2xl font-bold text-xs text-white bg-[#E96746] hover:bg-[#D45333] shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer self-start md:self-auto shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Custom Question</span>
+            </button>
+          </div>
 
+          {/* Search & Multi-Filters Toolbar */}
+          <div
+            className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${
+              isDarkMode ? 'bg-[#12233A] border-[#1E324F]' : 'bg-white border-[#EDE3D2]'
+            }`}
+          >
+            {/* Search Input */}
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs flex-1 min-w-[200px] ${
+                isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+              }`}
+            >
+              <Search className="w-3.5 h-3.5 text-[#52647A] dark:text-[#C1CDDC]" />
+              <input
+                type="text"
+                placeholder="Search prompt, topic, ID, or lesson..."
+                value={questionSearch}
+                onChange={(e) => setQuestionSearch(e.target.value)}
+                className="bg-transparent focus:outline-hidden text-xs w-full"
+              />
+              {questionSearch && (
+                <button
+                  onClick={() => setQuestionSearch('')}
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-xs text-[#52647A]"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {/* Track / Category Filter */}
               <select
                 value={questionTrackFilter}
                 onChange={(e) => setQuestionTrackFilter(e.target.value as any)}
                 className={`px-3 py-1.5 rounded-xl border text-xs font-semibold focus:outline-hidden ${
-                  isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+                  isDarkMode
+                    ? 'bg-[#0B1728] border-[#1E324F] text-[#FFF8ED]'
+                    : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238]'
                 }`}
               >
                 <option value="all">All Tracks</option>
@@ -585,68 +787,269 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <option value="economics">Economics</option>
                 <option value="finance">Finance</option>
               </select>
+
+              {/* Source Filter */}
+              <select
+                value={questionSourceFilter}
+                onChange={(e) => setQuestionSourceFilter(e.target.value as any)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold focus:outline-hidden ${
+                  isDarkMode
+                    ? 'bg-[#0B1728] border-[#1E324F] text-[#FFF8ED]'
+                    : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238]'
+                }`}
+              >
+                <option value="all">All Sources</option>
+                <option value="admin">Faculty Custom ({customQuestionCount})</option>
+                <option value="original">Original 200 Bank</option>
+              </select>
+
+              {/* Status Filter */}
+              <select
+                value={questionStatusFilter}
+                onChange={(e) => setQuestionStatusFilter(e.target.value as any)}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-semibold focus:outline-hidden ${
+                  isDarkMode
+                    ? 'bg-[#0B1728] border-[#1E324F] text-[#FFF8ED]'
+                    : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238]'
+                }`}
+              >
+                <option value="all">All Statuses</option>
+                <option value="published">Live in Quizzes ({allQuestions.length - draftQuestionCount})</option>
+                <option value="draft">Drafts / Hidden ({draftQuestionCount})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Count summary bar */}
+          <div className="flex items-center justify-between text-xs text-[#52647A] dark:text-[#C1CDDC] px-1">
+            <span>
+              Showing <strong>{filteredQuestions.length}</strong> of <strong>{allQuestions.length}</strong> questions
+              {questionSearch || questionTrackFilter !== 'all' || questionSourceFilter !== 'all' || questionStatusFilter !== 'all' ? (
+                <button
+                  onClick={() => {
+                    setQuestionSearch('');
+                    setQuestionTrackFilter('all');
+                    setQuestionSourceFilter('all');
+                    setQuestionStatusFilter('all');
+                  }}
+                  className="ml-2 text-[#E96746] dark:text-[#F07856] underline cursor-pointer"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </span>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
+                {customQuestionCount} Faculty Created
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                {allQuestions.length - draftQuestionCount} Published
+              </span>
             </div>
           </div>
 
           {/* Questions list */}
           <div className="space-y-3">
-            {filteredQuestions.slice(0, 30).map((question) => (
+            {filteredQuestions.length === 0 ? (
               <div
-                key={question.id}
-                className={`p-4 rounded-2xl border transition-colors flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                  isDarkMode
-                    ? 'bg-[#12233A] border-[#1E324F]'
-                    : 'bg-white border-[#EDE3D2]'
+                className={`text-center py-12 rounded-3xl border ${
+                  isDarkMode ? 'bg-[#12233A] border-[#1E324F]' : 'bg-white border-[#EDE3D2]'
                 }`}
               >
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#FDECE7] dark:bg-[#1E324F] text-[#E96746] dark:text-[#F07856]">
-                      {question.trackId}
-                    </span>
-                    <span className="text-[10px] font-bold text-[#52647A] dark:text-[#C1CDDC]">
-                      ID: {question.id} • Lesson: {question.lessonId}
-                    </span>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                      {question.difficulty}
-                    </span>
-                    <span className="text-[10px] font-bold text-[#E96746] dark:text-[#F07856]">
-                      +{question.xpPoints} XP
-                    </span>
-                  </div>
-
-                  <p
-                    className={`font-bold text-sm leading-snug ${
-                      isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
-                    }`}
-                  >
-                    {question.prompt}
-                  </p>
-
-                  <div className="text-xs text-[#52647A] dark:text-[#C1CDDC] flex items-center gap-2">
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      Answer: {question.options[question.correctOptionIndex]}
-                    </span>
-                  </div>
-                </div>
-
+                <HelpCircle className="w-10 h-10 mx-auto text-[#52647A] dark:text-[#C1CDDC] mb-3 opacity-60" />
+                <h3 className="font-bold text-sm">No questions match your current filters</h3>
+                <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] mt-1 max-w-sm mx-auto">
+                  Try adjusting your search query, or create a brand new custom question for your students.
+                </p>
                 <button
-                  onClick={() => setEditingQuestion(question)}
-                  className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 shrink-0 self-start md:self-auto cursor-pointer ${
-                    isDarkMode
-                      ? 'border-[#1E324F] hover:bg-[#1E324F] text-[#C1CDDC]'
-                      : 'border-[#EDE3D2] hover:bg-[#FFF8ED] text-[#263238]'
-                  }`}
+                  onClick={() => {
+                    setQuestionSearch('');
+                    setQuestionTrackFilter('all');
+                    setQuestionSourceFilter('all');
+                    setQuestionStatusFilter('all');
+                  }}
+                  className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-[#E96746] text-white cursor-pointer"
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit Question</span>
+                  Reset Filters
                 </button>
               </div>
-            ))}
+            ) : (
+              filteredQuestions.slice(0, 40).map((question) => {
+                const isCustom = question.source === 'admin';
+                const isPub = question.isPublished !== false;
 
-            {filteredQuestions.length > 30 && (
+                return (
+                  <div
+                    key={question.id}
+                    className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-start justify-between gap-4 shadow-2xs ${
+                      !isPub
+                        ? isDarkMode
+                          ? 'bg-[#0E1B2C] border-amber-500/30 opacity-85'
+                          : 'bg-[#FFFDF7] border-amber-300 opacity-90'
+                        : isCustom
+                        ? isDarkMode
+                          ? 'bg-[#132238] border-purple-500/40'
+                          : 'bg-white border-purple-200'
+                        : isDarkMode
+                        ? 'bg-[#12233A] border-[#1E324F]'
+                        : 'bg-white border-[#EDE3D2]'
+                    }`}
+                  >
+                    <div className="space-y-2 flex-1">
+                      {/* Metadata Badges */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#FDECE7] dark:bg-[#1E324F] text-[#E96746] dark:text-[#F07856]">
+                          {question.trackId}
+                        </span>
+
+                        {isCustom ? (
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                            Faculty Custom
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                            Original Bank
+                          </span>
+                        )}
+
+                        {isPub ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5" />
+                            Live in Quizzes
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                            <Lock className="w-2.5 h-2.5" />
+                            Draft / Hidden
+                          </span>
+                        )}
+
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                          {question.difficulty}
+                        </span>
+
+                        <span className="text-[10px] font-bold text-[#E96746] dark:text-[#F07856]">
+                          +{question.xpPoints} XP
+                        </span>
+
+                        <span className="text-[10px] text-[#52647A] dark:text-[#C1CDDC]">
+                          ID: <code className="font-mono">{question.id}</code>
+                        </span>
+                        <span className="text-[10px] text-[#52647A] dark:text-[#C1CDDC]">
+                          • Lesson: <code className="font-mono">{question.lessonId}</code>
+                        </span>
+                        {question.topicTag && (
+                          <span className="text-[10px] text-[#52647A] dark:text-[#C1CDDC]">
+                            • {question.topicTag}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Prompt */}
+                      <p
+                        className={`font-bold text-sm leading-snug ${
+                          isDarkMode ? 'text-[#FFF8ED]' : 'text-[#263238]'
+                        }`}
+                      >
+                        {question.prompt}
+                      </p>
+
+                      {/* Options Preview */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                        {question.options.map((opt, idx) => {
+                          const isCorrect = idx === question.correctOptionIndex;
+                          return (
+                            <div
+                              key={idx}
+                              className={`text-xs px-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 ${
+                                isCorrect
+                                  ? isDarkMode
+                                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300 font-bold'
+                                    : 'bg-emerald-50 border-emerald-300 text-emerald-800 font-bold'
+                                  : isDarkMode
+                                  ? 'bg-[#0B1728]/60 border-[#1E324F] text-[#C1CDDC]'
+                                  : 'bg-[#FFF8ED]/50 border-[#EDE3D2] text-[#52647A]'
+                              }`}
+                            >
+                              <span className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] shrink-0 font-mono opacity-80">
+                                {String.fromCharCode(65 + idx)}
+                              </span>
+                              <span className="truncate flex-1">{opt}</span>
+                              {isCorrect && <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Explanation */}
+                      <div className="text-xs text-[#52647A] dark:text-[#C1CDDC] pt-1">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">Rationale: </span>
+                        <span className="line-clamp-2">{question.explanation}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Controls */}
+                    <div className="flex md:flex-col items-center gap-2 shrink-0 self-start md:self-stretch justify-end">
+                      {/* Publish / Unpublish Toggle */}
+                      <button
+                        onClick={() => handleTogglePublishQuestion(question)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer w-full justify-center ${
+                          isPub
+                            ? isDarkMode
+                              ? 'border-amber-500/30 text-amber-300 hover:bg-amber-500/10'
+                              : 'border-amber-400 text-amber-700 hover:bg-amber-50'
+                            : isDarkMode
+                            ? 'border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/10'
+                            : 'border-emerald-400 text-emerald-700 hover:bg-emerald-50'
+                        }`}
+                        title={isPub ? 'Move to Drafts (Hide from student quizzes)' : 'Publish Live to Student Quizzes'}
+                      >
+                        {isPub ? (
+                          <>
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>Unpublish</span>
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Publish</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Edit Question */}
+                      <button
+                        onClick={() => setEditingQuestion(question)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer w-full justify-center ${
+                          isDarkMode
+                            ? 'border-[#1E324F] hover:bg-[#1E324F] text-[#C1CDDC]'
+                            : 'border-[#EDE3D2] hover:bg-[#FFF8ED] text-[#263238]'
+                        }`}
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+
+                      {/* Delete Question */}
+                      <button
+                        onClick={() => setQuestionToDelete(question)}
+                        className="px-3 py-1.5 rounded-xl border border-rose-500/30 hover:bg-rose-500/15 text-rose-600 dark:text-rose-400 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer w-full justify-center"
+                        title={isCustom ? 'Delete custom question' : 'Archive question from future quizzes'}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {filteredQuestions.length > 40 && (
               <div className="text-center py-4 text-xs font-semibold text-[#52647A] dark:text-[#C1CDDC]">
-                Showing first 30 of {filteredQuestions.length} matched questions. Use search to refine.
+                Showing first 40 of {filteredQuestions.length} matched questions. Use search and track filters to narrow results.
               </div>
             )}
           </div>
@@ -1007,20 +1410,311 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-      {/* EDIT QUESTION MODAL */}
+      {/* 1. CREATE CUSTOM QUESTION MODAL */}
+      {isCreateQuestionOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-2xl rounded-3xl p-6 sm:p-8 border shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto ${
+              isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+            }`}
+          >
+            <div className="flex items-center justify-between border-b pb-4 border-[#EDE3D2] dark:border-[#1E324F]">
+              <div>
+                <span className="text-xs font-black uppercase text-[#E96746] dark:text-[#F07856] flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Faculty Curriculum Authoring
+                </span>
+                <h3 className="text-xl font-black mt-0.5">Create New Quiz Question</h3>
+              </div>
+              <button
+                onClick={() => setIsCreateQuestionOpen(false)}
+                className="p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Error Banner */}
+            {createFormError && (
+              <div className="p-3.5 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span className="font-semibold">{createFormError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCustomQuestion} className="space-y-4">
+              {/* Category / Track & Lesson Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold block mb-1">Learning Track / Category *</label>
+                  <select
+                    value={newQuestionForm.trackId}
+                    onChange={(e) => {
+                      const nextTrack = e.target.value as TrackId;
+                      const matchLesson = lessons.find((l) => l.trackId === nextTrack);
+                      setNewQuestionForm({
+                        ...newQuestionForm,
+                        trackId: nextTrack,
+                        lessonId: matchLesson ? matchLesson.id : `${nextTrack.slice(0, 3)}-1`
+                      });
+                    }}
+                    className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold focus:outline-hidden ${
+                      isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                    }`}
+                  >
+                    <option value="accounting">Accounting (Financial &amp; Cost)</option>
+                    <option value="economics">Economics (Micro &amp; Macro)</option>
+                    <option value="finance">Finance (Valuation &amp; Markets)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold block mb-1">Associated Lesson Module *</label>
+                  <select
+                    value={newQuestionForm.lessonId}
+                    onChange={(e) => setNewQuestionForm({ ...newQuestionForm, lessonId: e.target.value })}
+                    className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold focus:outline-hidden ${
+                      isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                    }`}
+                  >
+                    {lessons
+                      .filter((l) => l.trackId === newQuestionForm.trackId)
+                      .map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.id}: {l.title}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Topic Tag & Difficulty & XP */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs font-bold block mb-1">Topic Tag *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. DCF Modeling, Working Capital"
+                    value={newQuestionForm.topicTag}
+                    onChange={(e) => setNewQuestionForm({ ...newQuestionForm, topicTag: e.target.value })}
+                    className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                      isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                    }`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold block mb-1">Difficulty Level *</label>
+                  <select
+                    value={newQuestionForm.difficulty}
+                    onChange={(e) =>
+                      setNewQuestionForm({
+                        ...newQuestionForm,
+                        difficulty: e.target.value as any
+                      })
+                    }
+                    className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                      isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                    }`}
+                  >
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold block mb-1">XP Points Awarded *</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="100"
+                    step="5"
+                    value={newQuestionForm.xpPoints}
+                    onChange={(e) => setNewQuestionForm({ ...newQuestionForm, xpPoints: Number(e.target.value) })}
+                    className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                      isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                    }`}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Question Prompt */}
+              <div>
+                <label className="text-xs font-bold block mb-1">Question Prompt *</label>
+                <textarea
+                  rows={2}
+                  placeholder="State the financial or business question clearly..."
+                  value={newQuestionForm.prompt}
+                  onChange={(e) => setNewQuestionForm({ ...newQuestionForm, prompt: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                    isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                  }`}
+                  required
+                />
+              </div>
+
+              {/* Scenario Context (Optional) */}
+              <div>
+                <label className="text-xs font-bold block mb-1">Practical Scenario Context (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. A technology enterprise in Bengaluru evaluating a ₹50 Crore debt issue..."
+                  value={newQuestionForm.scenario}
+                  onChange={(e) => setNewQuestionForm({ ...newQuestionForm, scenario: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                    isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                  }`}
+                />
+              </div>
+
+              {/* Answer Options & Correct Key */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold block">
+                    Answer Options (Select the radio of the correct answer) *
+                  </label>
+                  {newQuestionForm.options.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNewQuestionForm({
+                          ...newQuestionForm,
+                          options: [...newQuestionForm.options, '']
+                        })
+                      }
+                      className="text-[11px] font-bold text-[#E96746] dark:text-[#F07856] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Option
+                    </button>
+                  )}
+                </div>
+
+                {newQuestionForm.options.map((opt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="newQuestionCorrect"
+                      checked={newQuestionForm.correctOptionIndex === idx}
+                      onChange={() => setNewQuestionForm({ ...newQuestionForm, correctOptionIndex: idx })}
+                      className="accent-[#E96746] cursor-pointer"
+                      title="Mark as correct answer key"
+                    />
+                    <span className="text-xs font-mono font-bold text-[#52647A] dark:text-[#C1CDDC] w-4">
+                      {String.fromCharCode(65 + idx)}
+                    </span>
+                    <input
+                      type="text"
+                      placeholder={`Option ${String.fromCharCode(65 + idx)}...`}
+                      value={opt}
+                      onChange={(e) => {
+                        const updated = [...newQuestionForm.options];
+                        updated[idx] = e.target.value;
+                        setNewQuestionForm({ ...newQuestionForm, options: updated });
+                      }}
+                      className={`flex-1 px-3 py-1.5 rounded-xl border text-xs focus:outline-hidden ${
+                        isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                      }`}
+                      required
+                    />
+                    {newQuestionForm.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = newQuestionForm.options.filter((_, i) => i !== idx);
+                          setNewQuestionForm({
+                            ...newQuestionForm,
+                            options: updated,
+                            correctOptionIndex: Math.min(newQuestionForm.correctOptionIndex, updated.length - 1)
+                          });
+                        }}
+                        className="p-1 rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer"
+                        title="Remove option"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Pedagogical Explanation */}
+              <div>
+                <label className="text-xs font-bold block mb-1">
+                  Explanatory Feedback &amp; Rationale *
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Explain why the correct answer is right and why distractors are inaccurate..."
+                  value={newQuestionForm.explanation}
+                  onChange={(e) => setNewQuestionForm({ ...newQuestionForm, explanation: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                    isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                  }`}
+                  required
+                />
+              </div>
+
+              {/* Publication Status Toggle */}
+              <div
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
+                  isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                }`}
+              >
+                <div>
+                  <span className="font-bold text-xs block">Publish to Student Quizzes</span>
+                  <span className="text-[11px] text-[#52647A] dark:text-[#C1CDDC]">
+                    When checked, this question immediately appears in standard user quizzes and Spaced Review.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={newQuestionForm.isPublished}
+                  onChange={(e) => setNewQuestionForm({ ...newQuestionForm, isPublished: e.target.checked })}
+                  className="w-4 h-4 accent-[#E96746] rounded-sm cursor-pointer"
+                />
+              </div>
+
+              {/* Form Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EDE3D2] dark:border-[#1E324F]">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateQuestionOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs text-white bg-[#E96746] hover:bg-[#D45333] shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{newQuestionForm.isPublished ? 'Create & Publish Question' : 'Save as Draft'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 2. EDIT QUESTION MODAL */}
       {editingQuestion && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div
             className={`w-full max-w-xl rounded-3xl p-6 sm:p-8 border shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto ${
               isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
             }`}
           >
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-b pb-4 border-[#EDE3D2] dark:border-[#1E324F]">
               <div>
-                <span className="text-xs font-black uppercase text-[#E96746] dark:text-[#F07856]">
-                  Edit Quiz Question
+                <span className="text-xs font-black uppercase text-[#E96746] dark:text-[#F07856] flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5" />
+                  {editingQuestion.source === 'admin' ? 'Faculty Custom Question' : 'Original Bank Question'}
                 </span>
-                <h3 className="text-lg font-black">{editingQuestion.id}</h3>
+                <h3 className="text-lg font-black font-mono mt-0.5">{editingQuestion.id}</h3>
               </div>
               <button
                 onClick={() => setEditingQuestion(null)}
@@ -1032,7 +1726,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
             <form onSubmit={handleSaveQuestion} className="space-y-4">
               <div>
-                <label className="text-xs font-bold block mb-1">Question Prompt</label>
+                <label className="text-xs font-bold block mb-1">Question Prompt *</label>
                 <textarea
                   rows={2}
                   value={editingQuestion.prompt}
@@ -1044,18 +1738,53 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 />
               </div>
 
+              {/* Topic Tag */}
+              <div>
+                <label className="text-xs font-bold block mb-1">Topic Tag</label>
+                <input
+                  type="text"
+                  value={editingQuestion.topicTag || ''}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, topicTag: e.target.value })}
+                  className={`w-full px-3 py-2 rounded-xl border text-xs focus:outline-hidden ${
+                    isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                  }`}
+                />
+              </div>
+
               {/* Options */}
               <div className="space-y-2">
-                <label className="text-xs font-bold block">Answer Options &amp; Correct Key</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold block">Answer Options &amp; Correct Key *</label>
+                  {editingQuestion.options.length < 5 && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditingQuestion({
+                          ...editingQuestion,
+                          options: [...editingQuestion.options, '']
+                        })
+                      }
+                      className="text-[11px] font-bold text-[#E96746] dark:text-[#F07856] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Option
+                    </button>
+                  )}
+                </div>
+
                 {editingQuestion.options.map((opt, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <input
                       type="radio"
-                      name="correctOption"
+                      name="editCorrectOption"
                       checked={editingQuestion.correctOptionIndex === idx}
                       onChange={() => setEditingQuestion({ ...editingQuestion, correctOptionIndex: idx })}
-                      className="accent-[#E96746]"
+                      className="accent-[#E96746] cursor-pointer"
+                      title="Select as correct answer"
                     />
+                    <span className="text-xs font-mono font-bold text-[#52647A] dark:text-[#C1CDDC] w-4">
+                      {String.fromCharCode(65 + idx)}
+                    </span>
                     <input
                       type="text"
                       value={opt}
@@ -1069,12 +1798,28 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       }`}
                       required
                     />
+                    {editingQuestion.options.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = editingQuestion.options.filter((_, i) => i !== idx);
+                          setEditingQuestion({
+                            ...editingQuestion,
+                            options: updated,
+                            correctOptionIndex: Math.min(editingQuestion.correctOptionIndex, updated.length - 1)
+                          });
+                        }}
+                        className="p-1 rounded-lg hover:bg-rose-500/10 text-rose-500 cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
 
               <div>
-                <label className="text-xs font-bold block mb-1">Explanation</label>
+                <label className="text-xs font-bold block mb-1">Pedagogical Explanation *</label>
                 <textarea
                   rows={2}
                   value={editingQuestion.explanation}
@@ -1092,6 +1837,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <input
                     type="number"
                     min="5"
+                    max="100"
                     step="5"
                     value={editingQuestion.xpPoints}
                     onChange={(e) => setEditingQuestion({ ...editingQuestion, xpPoints: Number(e.target.value) })}
@@ -1117,23 +1863,116 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              {/* Publish Toggle */}
+              <div
+                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 ${
+                  isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+                }`}
+              >
+                <div>
+                  <span className="font-bold text-xs block">Active &amp; Published in Quizzes</span>
+                  <span className="text-[11px] text-[#52647A] dark:text-[#C1CDDC]">
+                    Uncheck to temporarily hide this question from Student quizzes as a draft.
+                  </span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editingQuestion.isPublished !== false}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, isPublished: e.target.checked })}
+                  className="w-4 h-4 accent-[#E96746] rounded-sm cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-[#EDE3D2] dark:border-[#1E324F]">
                 <button
                   type="button"
-                  onClick={() => setEditingQuestion(null)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                  onClick={() => {
+                    const target = editingQuestion;
+                    setEditingQuestion(null);
+                    setQuestionToDelete(target);
+                  }}
+                  className="text-xs font-bold text-rose-600 hover:text-rose-700 dark:text-rose-400 flex items-center gap-1 cursor-pointer"
                 >
-                  Cancel
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Question</span>
                 </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 rounded-xl font-bold text-xs text-white bg-[#E96746] hover:bg-[#D45333] shadow-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <Save className="w-4 h-4" />
-                  <span>Save Question</span>
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingQuestion(null)}
+                    className="px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 rounded-xl font-bold text-xs text-white bg-[#E96746] hover:bg-[#D45333] shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>Save Question</span>
+                  </button>
+                </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. DELETE QUESTION CONFIRMATION MODAL */}
+      {questionToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-md rounded-3xl p-6 sm:p-7 border shadow-2xl space-y-4 ${
+              isDarkMode ? 'bg-[#12233A] border-rose-500/40 text-[#FFF8ED]' : 'bg-white border-rose-200 text-[#263238]'
+            }`}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-lg font-black">
+                {questionToDelete.source === 'admin' ? 'Delete Custom Question?' : 'Archive Bank Question?'}
+              </h3>
+              <p className="text-xs text-[#52647A] dark:text-[#C1CDDC] leading-relaxed">
+                {questionToDelete.source === 'admin'
+                  ? 'This custom question will be permanently removed from all future student quiz assessments. Previous student XP and historical records will remain safe.'
+                  : 'This question will be archived and excluded from future student quizzes. Original curriculum files remain unmodified.'}
+              </p>
+            </div>
+
+            <div
+              className={`p-3 rounded-xl border text-xs ${
+                isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+              }`}
+            >
+              <div className="font-mono text-[11px] text-[#52647A] dark:text-[#C1CDDC] truncate">
+                ID: {questionToDelete.id}
+              </div>
+              <div className="font-bold line-clamp-2 mt-0.5">{questionToDelete.prompt}</div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setQuestionToDelete(null)}
+                className={`flex-1 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                  isDarkMode
+                    ? 'border-[#1E324F] hover:bg-[#1E324F] text-[#C1CDDC]'
+                    : 'border-[#EDE3D2] hover:bg-[#FFF8ED] text-[#263238]'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteQuestion}
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-md transition cursor-pointer"
+              >
+                Confirm Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
