@@ -69,26 +69,24 @@ export default function App() {
   const VALID_TABS: ActiveTab[] = ['dashboard', 'tracks', 'practice', 'leaderboard', 'profile', 'legal', 'admin'];
 
   // Navigation & View state
-  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+
+  // Authentication & Session state:
+  // REQUIREMENT: On every fresh website visit or page reload, ALWAYS show the login screen first.
+  // Never restore a session from localStorage or sessionStorage on page reload or fresh visit.
+  const [currentSession, setCurrentSession] = useState<ActiveSession | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [securityNotice, setSecurityNotice] = useState<string | null>(null);
+  const [loginInitialTab, setLoginInitialTab] = useState<UserRole>(() => {
     try {
       const hash = window.location.hash.replace('#', '').toLowerCase();
-      if (VALID_TABS.includes(hash as ActiveTab)) {
-        return hash as ActiveTab;
-      }
+      if (hash === 'admin') return 'admin';
     } catch {
       // Ignore
     }
-    return 'dashboard';
+    return 'user';
   });
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-
-  // Authentication & Session state
-  const [currentSession, setCurrentSession] = useState<ActiveSession | null>(() => {
-    return authService.getCurrentSession();
-  });
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [securityNotice, setSecurityNotice] = useState<string | null>(null);
-  const [loginInitialTab, setLoginInitialTab] = useState<UserRole>('user');
 
   // Strict role derivation: role MUST come directly from the cryptographically verified session
   const currentRole: UserRole = currentSession ? currentSession.role : 'user';
@@ -116,13 +114,25 @@ export default function App() {
 
   // Route protection against direct URL navigation, bookmarking, and browser back/forward history
   useEffect(() => {
+    // Proactively purge any residual storage session tokens on fresh visit or page reload
+    authService.logout();
+    dataService.setRole(null);
+
     const handleHashSync = () => {
       const rawHash = window.location.hash.replace('#', '').toLowerCase();
       if (!rawHash) return;
 
+      const session = authService.getCurrentSession();
+      if (!session) {
+        // Not authenticated: always keep on login screen and route to matching login tab
+        if (rawHash === 'admin') {
+          setLoginInitialTab('admin');
+        }
+        return;
+      }
+
       if (rawHash === 'admin') {
-        const session = authService.getCurrentSession();
-        if (!session || session.role !== 'admin') {
+        if (session.role !== 'admin') {
           handleUnauthorizedAdminAttempt(
             'Security Enforcement: Direct navigation to Admin route from non-admin session is prohibited. Session cleared. Administrator credentials required.'
           );
@@ -141,12 +151,7 @@ export default function App() {
     // Initial check on mount
     const initialHash = window.location.hash.replace('#', '').toLowerCase();
     if (initialHash === 'admin') {
-      const session = authService.getCurrentSession();
-      if (!session || session.role !== 'admin') {
-        handleUnauthorizedAdminAttempt(
-          'Security Enforcement: Admin route requires fresh Administrator authentication.'
-        );
-      }
+      setLoginInitialTab('admin');
     }
 
     return () => {
@@ -225,10 +230,34 @@ export default function App() {
   // Login & Session handlers
   const handleLoginSuccess = (session: { email: string; role: UserRole; displayName: string }) => {
     const freshSession = authService.getCurrentSession();
-    setCurrentSession(freshSession);
+    const active = freshSession || (session as ActiveSession);
+    setCurrentSession(active);
     dataService.setRole(session.role);
     setSecurityNotice(null);
     setIsAuthModalOpen(false);
+
+    // Route properly according to role and URL hash
+    const rawHash = window.location.hash.replace('#', '').toLowerCase();
+    if (session.role === 'admin') {
+      if (rawHash === 'admin') {
+        setActiveTab('admin');
+      } else if (VALID_TABS.includes(rawHash as ActiveTab)) {
+        setActiveTab(rawHash as ActiveTab);
+      } else {
+        setActiveTab('dashboard');
+      }
+    } else {
+      // User / Learner: block access to admin hash and route to dashboard
+      if (rawHash === 'admin') {
+        window.history.replaceState(null, '', window.location.pathname);
+        setActiveTab('dashboard');
+      } else if (VALID_TABS.includes(rawHash as ActiveTab) && rawHash !== 'admin') {
+        setActiveTab(rawHash as ActiveTab);
+      } else {
+        setActiveTab('dashboard');
+      }
+    }
+
     refreshState();
     showToast(
       `Welcome, ${session.displayName}! Signed in as ${session.role === 'admin' ? 'Faculty Admin' : 'College Scholar'}.`,

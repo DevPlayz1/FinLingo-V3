@@ -142,8 +142,10 @@ function generateRandomHex(byteCount = 16): string {
 
 class AuthService {
   private initialized = false;
+  private activeSession: ActiveSession | null = null;
 
   constructor() {
+    this.logout();
     this.ensureInitialized();
   }
 
@@ -396,7 +398,22 @@ class AuthService {
       };
     }
 
-    safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+    // Store session in-memory only: active for the current runtime session.
+    // Fresh visit or page reload will always require authentication first.
+    this.activeSession = session;
+
+    // Purge any stored session in localStorage/sessionStorage so reload/revisit never auto-authenticates
+    safeStorage.removeItem(STORAGE_KEYS.SESSION);
+    try {
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+        window.localStorage.removeItem(STORAGE_KEYS.SESSION);
+        window.sessionStorage.removeItem('finlingo_active_session');
+        window.localStorage.removeItem('finlingo_active_session');
+      }
+    } catch {
+      // Ignore
+    }
 
     return {
       success: true,
@@ -406,29 +423,25 @@ class AuthService {
 
   // --- SESSION MANAGEMENT ---
   getCurrentSession(): ActiveSession | null {
-    try {
-      const raw = safeStorage.getItem(STORAGE_KEYS.SESSION);
-      if (!raw) return null;
-      const session: ActiveSession = JSON.parse(raw);
+    if (!this.activeSession) return null;
 
+    try {
       // Verify session epoch is still valid (not invalidated by a password change)
       const accounts = this.getAccounts();
-      const account = accounts[session.email.toLowerCase()];
-      if (!account || (account.sessionEpoch && session.sessionEpoch < account.sessionEpoch)) {
+      const account = accounts[this.activeSession.email.toLowerCase()];
+      if (!account || (account.sessionEpoch && this.activeSession.sessionEpoch < account.sessionEpoch)) {
         // Session was invalidated
         this.logout();
         return null;
       }
 
-      if (session.role === 'admin' && session.displayName !== 'Prof. Dr. Anjali Sane') {
-        session.displayName = 'Prof. Dr. Anjali Sane';
-        safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
-      } else if (session.role === 'user' && session.displayName !== 'Dev Purecha') {
-        session.displayName = 'Dev Purecha';
-        safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+      if (this.activeSession.role === 'admin' && this.activeSession.displayName !== 'Prof. Dr. Anjali Sane') {
+        this.activeSession.displayName = 'Prof. Dr. Anjali Sane';
+      } else if (this.activeSession.role === 'user' && this.activeSession.displayName !== 'Dev Purecha') {
+        this.activeSession.displayName = 'Dev Purecha';
       }
 
-      return session;
+      return this.activeSession;
     } catch {
       return null;
     }
@@ -439,7 +452,18 @@ class AuthService {
   }
 
   logout(): void {
+    this.activeSession = null;
     safeStorage.removeItem(STORAGE_KEYS.SESSION);
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(STORAGE_KEYS.SESSION);
+        window.sessionStorage.removeItem(STORAGE_KEYS.SESSION);
+        window.localStorage.removeItem('finlingo_active_session');
+        window.sessionStorage.removeItem('finlingo_active_session');
+      }
+    } catch {
+      // Ignore
+    }
   }
 
   // --- PASSWORD MANAGEMENT (IN-APP) ---
@@ -491,7 +515,6 @@ class AuthService {
     const currentSession = this.getCurrentSession();
     if (currentSession && currentSession.email.toLowerCase() === normalizedEmail) {
       currentSession.sessionEpoch = now;
-      safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(currentSession));
     }
 
     return { success: true };
