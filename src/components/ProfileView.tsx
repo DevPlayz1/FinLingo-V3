@@ -364,7 +364,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                         ? 'bg-[#0B192C] border-[#1E3A5F] text-[#FFF8ED]'
                         : 'bg-[#FFF8ED] border-[#E8F0F8] text-[#263238]'
                     }`}
-                    placeholder="Dev Purecha"
+                    placeholder={currentRole === 'admin' ? 'Prof. Dr. Anjali Sane' : 'Dev Purecha'}
                   />
                   <input
                     type="text"
@@ -511,28 +511,25 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </button>
             )}
 
-            {/* Demo Role Switcher */}
-            {onOpenRoleSelection && (
-              <button
-                onClick={onOpenRoleSelection}
-                className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-bold transition flex items-center justify-between cursor-pointer ${
-                  currentRole === 'admin'
-                    ? 'bg-[#E96746] text-white border-[#E96746] shadow-2xs'
-                    : isDarkMode
-                    ? 'bg-[#0B192C] border-[#1E3A5F] text-[#FFF8ED] hover:bg-[#132238]'
-                    : 'bg-[#FFF8ED] border-[#E8F0F8] text-[#173B63] hover:bg-white'
-                }`}
-                title="Switch between College Scholar (User) and Academic Admin roles"
-              >
-                <span className="flex items-center gap-2">
-                  <Shield className="w-4 h-4" />
-                  <span>Demo Role Access</span>
-                </span>
-                <span className="uppercase text-[10px] tracking-wider font-extrabold underline">
-                  {currentRole === 'admin' ? 'Admin Active' : 'Student Active'}
-                </span>
-              </button>
-            )}
+            {/* Active Session Role Display */}
+            <div
+              className={`w-full py-2.5 px-3.5 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                currentRole === 'admin'
+                  ? 'bg-[#E96746]/10 border-[#E96746]/30 text-[#E96746] dark:text-[#F07856]'
+                  : isDarkMode
+                  ? 'bg-[#0B192C] border-[#1E3A5F] text-[#FFF8ED]'
+                  : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#173B63]'
+              }`}
+              title="Active Role - Switching roles strictly requires signing out"
+            >
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>Active Role</span>
+              </span>
+              <span className="uppercase text-[10px] tracking-wider font-extrabold">
+                {currentRole === 'admin' ? 'Faculty Admin' : 'College Scholar'}
+              </span>
+            </div>
 
             {/* Account Sign Out Button */}
             {onLogout && (
@@ -1499,31 +1496,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
               }`}
             >
-              Operating on local browser demo storage with instant persistence. Restore to default sample data anytime.
+              {currentRole === 'admin'
+                ? 'Operating on local browser storage with instant persistence. Restore to default admin settings anytime.'
+                : 'Operating on local browser storage with instant persistence. Learning progress, quiz records, and study streaks are saved securely.'}
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowResetConfirm(true)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>
-                {currentRole === 'admin'
-                  ? 'Restore Admin Profile Defaults'
-                  : 'Restore Scholar Progress Defaults'}
-              </span>
-            </button>
-          </div>
+          {currentRole === 'admin' && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-[#DC2626] hover:bg-[#FEE2E2] border border-[#DC2626]/20 transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Restore Admin Profile Defaults</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {showResetConfirm && (
+        {currentRole === 'admin' && showResetConfirm && (
           <div className="p-4 rounded-xl bg-[#FEE2E2] border border-[#DC2626]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-[#7F1D1D]">
             <span>
-              {currentRole === 'admin'
-                ? 'Restore Admin profile and administrative settings to defaults? (Dev Purecha\'s learning progress, XP, and streaks will NOT be affected).'
-                : 'Restore your student profile, XP, quiz records, and streaks to defaults? (Admin curriculum settings will NOT be affected).'}
+              Restore Admin profile and administrative settings to defaults? (Dev Purecha's learning progress, XP, and streaks will NOT be affected).
             </span>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
               <button

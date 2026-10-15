@@ -20,6 +20,7 @@ import {
   INITIAL_LEADERBOARD
 } from '../data/curriculum';
 import { getLevelInfo, XP_REWARDS } from './gamification';
+import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 const STORAGE_KEYS = {
   USER_PROFILE: 'finlingo_user_profile_v1',
@@ -170,7 +171,7 @@ export const ADMIN_DEFAULT_PROFILE: UserProfile = {
   uid: 'admin_user_001',
   displayName: 'Prof. Dr. Anjali Sane',
   email: 'curriculum.admin@university.edu',
-  avatar: '',
+  avatar: PROF_ANJALI_SANE_AVATAR,
   university: 'Faculty of Commerce & Finance',
   major: 'Curriculum & Academic Governance',
   graduationYear: 'Faculty / Staff',
@@ -457,8 +458,8 @@ class DataService {
           if (parsed.displayName === 'Prof. Eleanor Vance' || !parsed.displayName) {
             parsed.displayName = 'Prof. Dr. Anjali Sane';
           }
-          if (parsed.avatar?.includes('unsplash.com')) {
-            parsed.avatar = '';
+          if (parsed.avatar?.includes('unsplash.com') || !parsed.avatar) {
+            parsed.avatar = PROF_ANJALI_SANE_AVATAR;
           }
         }
         if (!parsed.privacySettings) {

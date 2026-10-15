@@ -5,6 +5,7 @@
 
 import { UserRole } from '../types';
 import { validatePassword } from '../utils/passwordPolicy';
+import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 export interface PredefinedAccount {
   email: string;
@@ -167,7 +168,7 @@ class AuthService {
             email: INITIAL_CREDENTIALS.admin.email,
             role: 'admin',
             displayName: 'Prof. Dr. Anjali Sane',
-            avatar: '',
+            avatar: PROF_ANJALI_SANE_AVATAR,
             university: 'Faculty of Commerce & Finance',
             salt: adminSalt,
             hash: adminHash,
@@ -202,8 +203,8 @@ class AuthService {
             existingAccounts[adminKey].displayName = 'Prof. Dr. Anjali Sane';
             updated = true;
           }
-          if (existingAccounts[adminKey].avatar?.includes('unsplash.com')) {
-            existingAccounts[adminKey].avatar = '';
+          if (existingAccounts[adminKey].avatar?.includes('unsplash.com') || !existingAccounts[adminKey].avatar) {
+            existingAccounts[adminKey].avatar = PROF_ANJALI_SANE_AVATAR;
             updated = true;
           }
         }
@@ -380,21 +381,26 @@ class AuthService {
       loginTime: Date.now()
     };
 
-    safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
-
-    // Notice if tab was different from verified account role
-    let assignedRoleMismatch = undefined;
-    if (expectedRoleTab && expectedRoleTab !== account.role) {
-      assignedRoleMismatch = {
-        accountRole: account.role,
-        tabRole: expectedRoleTab
+    // Enforce strict separation between Admin and User login tabs
+    if (expectedRoleTab === 'admin' && account.role !== 'admin') {
+      return {
+        success: false,
+        error: 'Administrator credentials required. User account credentials cannot be used for Admin access.'
       };
     }
 
+    if (expectedRoleTab === 'user' && account.role === 'admin') {
+      return {
+        success: false,
+        error: 'Faculty Administrator credentials detected. Please switch to the Admin Login tab to sign in.'
+      };
+    }
+
+    safeStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(session));
+
     return {
       success: true,
-      user: session,
-      assignedRoleMismatch
+      user: session
     };
   }
 

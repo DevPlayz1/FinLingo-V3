@@ -26,7 +26,7 @@ import {
   Send,
   Trash2
 } from 'lucide-react';
-import { LegalDocId, UserProfile } from '../types';
+import { LegalDocId, UserProfile, UserRole } from '../types';
 import { LEGAL_DOCUMENTS, LegalDocument } from '../data/legalPolicies';
 import { dataService } from '../services/dataService';
 import { printOrSaveLegalDocument } from '../utils/printPdfHelper';
@@ -36,6 +36,7 @@ interface LegalCenterModalProps {
   onClose: () => void;
   initialDocId?: LegalDocId;
   userProfile: UserProfile;
+  currentRole?: UserRole;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onResetData: () => void;
   isDarkMode?: boolean;
@@ -46,6 +47,7 @@ export const LegalCenterModal: React.FC<LegalCenterModalProps> = ({
   onClose,
   initialDocId = 'privacy',
   userProfile,
+  currentRole,
   onUpdateProfile,
   onResetData,
   isDarkMode = false
@@ -691,13 +693,20 @@ export const LegalCenterModal: React.FC<LegalCenterModalProps> = ({
                     </p>
                   </div>
                   <div className="mt-4 pt-4 border-t border-[#E8F0F8] dark:border-[#1E3A5F]">
-                    <button
-                      onClick={() => setShowErasureConfirm(true)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition cursor-pointer shadow-sm"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Erase All Data &amp; Withdraw Consent</span>
-                    </button>
+                    {currentRole === 'admin' ? (
+                      <button
+                        onClick={() => setShowErasureConfirm(true)}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition cursor-pointer shadow-sm"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Erase All Data &amp; Withdraw Consent</span>
+                      </button>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                        <Shield className="w-4 h-4 shrink-0 text-amber-500" />
+                        <span>Student learning records and curriculum progression are administered exclusively by Faculty Administration. Self-service data reset is disabled for Student accounts.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

@@ -26,7 +26,7 @@ interface NavbarProps {
   currentRole: UserRole;
   spacedRepetitionDueCount: number;
   onOpenLegalCenter?: () => void;
-  onOpenRoleSelection: () => void;
+  onOpenRoleSelection?: () => void;
   onLogout?: () => void;
   accountEmail?: string;
   isDarkMode: boolean;
@@ -40,7 +40,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentRole,
   spacedRepetitionDueCount,
   onOpenLegalCenter,
-  onOpenRoleSelection,
   onLogout,
   accountEmail,
   isDarkMode,
@@ -241,26 +240,28 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </button>
 
-            {/* Active Demo Role Switcher Badge */}
-            <button
-              onClick={onOpenRoleSelection}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#E96746] dark:focus-visible:ring-[#F07856] cursor-pointer ${
+            {/* Active Session Role Indicator (Role switching strictly requires Sign Out) */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold ${
                 currentRole === 'admin'
-                  ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] shadow-2xs hover:scale-102'
+                  ? 'bg-[#E96746] dark:bg-[#F07856] text-white border-[#E96746] shadow-2xs'
                   : isDarkMode
-                  ? 'bg-[#12233A] text-[#FFF8ED] border-[#1E324F] hover:bg-[#1E324F]'
-                  : 'bg-[#FFFFFF] text-[#263238] border-[#EDE3D2] hover:bg-[#FFF8ED]'
+                  ? 'bg-[#12233A] text-[#FFF8ED] border-[#1E324F]'
+                  : 'bg-[#FFFFFF] text-[#263238] border-[#EDE3D2]'
               }`}
-              title="Active Demo Role - Click to switch between Admin and Student User"
+              title={`Active session role: ${
+                currentRole === 'admin'
+                  ? 'Faculty Administrator (Prof. Dr. Anjali Sane)'
+                  : 'College Scholar (Dev Purecha)'
+              }`}
             >
               {currentRole === 'admin' ? (
                 <Shield className="w-3.5 h-3.5" />
               ) : (
                 <GraduationCap className="w-3.5 h-3.5 text-[#E96746] dark:text-[#F07856]" />
               )}
-              <span className="capitalize">{currentRole === 'admin' ? 'Admin' : 'Student'}</span>
-              <span className="text-[10px] opacity-75 font-normal underline hidden sm:inline">Switch</span>
-            </button>
+              <span>{currentRole === 'admin' ? 'Admin' : 'User'}</span>
+            </div>
 
             {/* Legal & Privacy Center Button */}
             {onOpenLegalCenter && (

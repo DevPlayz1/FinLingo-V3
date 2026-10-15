@@ -14,20 +14,30 @@ import {
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { authService, INITIAL_CREDENTIALS } from '../services/authService';
+import { UserAvatar } from './UserAvatar';
+import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 interface AuthScreenProps {
   onLoginSuccess: (session: { email: string; role: UserRole; displayName: string }) => void;
   initialRoleTab?: UserRole;
+  securityNotice?: string | null;
   isDarkMode?: boolean;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
   onLoginSuccess,
   initialRoleTab = 'user',
+  securityNotice,
   isDarkMode = false
 }) => {
   // Selected tab on Login screen ('user' vs 'admin')
   const [selectedRoleTab, setSelectedRoleTab] = useState<UserRole>(initialRoleTab);
+
+  useEffect(() => {
+    if (initialRoleTab) {
+      setSelectedRoleTab(initialRoleTab);
+    }
+  }, [initialRoleTab]);
 
   // Form input states
   const [emailInput, setEmailInput] = useState('');
@@ -155,6 +165,17 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             </p>
           </div>
 
+          {/* Security Notice Banner */}
+          {securityNotice && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+              <Shield className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div>
+                <span className="font-extrabold block">Access Protection Active</span>
+                <span className="leading-relaxed">{securityNotice}</span>
+              </div>
+            </div>
+          )}
+
           {/* Entry Options: User Login vs Admin Login Tabs */}
           <div className={`grid grid-cols-2 p-1 rounded-2xl border ${cardBorder} ${inputBg}`}>
             <button
@@ -196,11 +217,23 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 : 'bg-[#E96746]/10 border-[#E96746]/20 text-[#E96746] dark:text-[#F07856]'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               {selectedRoleTab === 'admin' ? (
-                <Shield className="w-4 h-4 shrink-0" />
+                <UserAvatar
+                  src={PROF_ANJALI_SANE_AVATAR}
+                  name="Prof. Dr. Anjali Sane"
+                  size="xs"
+                  ring={true}
+                  ringClassName="ring-1 ring-amber-500"
+                />
               ) : (
-                <GraduationCap className="w-4 h-4 shrink-0" />
+                <UserAvatar
+                  src=""
+                  name="Dev Purecha"
+                  size="xs"
+                  ring={true}
+                  ringClassName="ring-1 ring-[#E96746]"
+                />
               )}
               <span className="font-semibold">
                 {selectedRoleTab === 'admin'

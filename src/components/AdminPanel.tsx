@@ -28,6 +28,8 @@ import {
   UserProfile
 } from '../types';
 import { dataService } from '../services/dataService';
+import { UserAvatar } from './UserAvatar';
+import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 interface AdminPanelProps {
   currentRole: UserRole;
@@ -35,9 +37,10 @@ interface AdminPanelProps {
   leaderboard: LeaderboardEntry[];
   userProfile: UserProfile;
   onRefreshData: () => void;
-  onSwitchRole: (newRole: UserRole) => void;
-  onOpenRoleSelection: () => void;
-  showToast: (title: string, xp?: number, icon?: 'xp' | 'success' | 'streak') => void;
+  onSwitchRole?: (newRole: UserRole) => void;
+  onOpenRoleSelection?: () => void;
+  onUnauthorized?: () => void;
+  showToast: (title: string, xp?: number, icon?: 'xp' | 'success' | 'streak' | 'info') => void;
   isDarkMode?: boolean;
 }
 
@@ -47,17 +50,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   leaderboard,
   userProfile,
   onRefreshData,
-  onSwitchRole,
-  onOpenRoleSelection,
+  onUnauthorized,
   showToast,
   isDarkMode = false
 }) => {
-  // Application Logic RBAC check
+  // Application Logic RBAC enforcement
+  useEffect(() => {
+    if (currentRole !== 'admin') {
+      onUnauthorized?.();
+    }
+  }, [currentRole, onUnauthorized]);
+
   if (currentRole !== 'admin') {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16">
         <div
-          className={`rounded-3xl p-8 sm:p-12 border text-center space-y-6 shadow-lg ${
+          className={`rounded-3xl p-8 sm:p-12 border text-center space-y-4 shadow-lg ${
             isDarkMode
               ? 'bg-[#12233A] border-rose-500/40 text-[#FFF8ED]'
               : 'bg-white border-rose-200 text-[#263238]'
@@ -68,37 +76,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
           <div>
             <span className="text-xs font-extrabold uppercase tracking-wider text-rose-500">
-              403 Forbidden • Access Denied
+              403 Forbidden • Session Terminated
             </span>
-            <h1 className="text-3xl font-black mt-1">Admin Authorization Required</h1>
+            <h1 className="text-2xl font-black mt-1">Admin Authorization Required</h1>
             <p
               className={`max-w-lg mx-auto text-sm mt-2 leading-relaxed ${
                 isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'
               }`}
             >
-              Your active session is running with the <strong>User (College Scholar)</strong> role.
-              The Admin Panel and its content modification APIs are restricted to verified
-              administrators.
+              Unauthorized access to Admin Panel detected. User session has been cleared. Redirecting to login...
             </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-            <button
-              onClick={() => onSwitchRole('admin')}
-              className="px-6 py-3 rounded-xl font-bold text-sm text-white shadow-xs bg-[#E96746] hover:bg-[#D45333] transition cursor-pointer flex items-center gap-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Switch to Admin Role</span>
-            </button>
-            <button
-              onClick={onOpenRoleSelection}
-              className={`px-5 py-3 rounded-xl font-semibold text-sm border transition cursor-pointer ${
-                isDarkMode
-                  ? 'border-[#1E324F] text-[#C1CDDC] hover:text-[#FFF8ED]'
-                  : 'border-[#EDE3D2] text-[#52647A] hover:text-[#263238]'
-              }`}
-            >
-              Open Role Selector
-            </button>
           </div>
         </div>
       </div>
@@ -283,16 +270,22 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         }`}
       >
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#E96746] text-white shadow-md shrink-0">
-            <Shield className="w-6 h-6" />
+          <div className="relative shrink-0">
+            <UserAvatar
+              src={userProfile.avatar || PROF_ANJALI_SANE_AVATAR}
+              name={userProfile.displayName || 'Prof. Dr. Anjali Sane'}
+              size="lg"
+              ring={true}
+              ringClassName="ring-2 ring-[#E96746]"
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#FDECE7] dark:bg-[#1E324F] text-[#E96746] dark:text-[#F07856] border border-[#E96746]/20">
-                Staff Administration
+                Prof. Dr. Anjali Sane
               </span>
               <span className="text-xs text-[#52647A] dark:text-[#C1CDDC]">
-                Local Sample Dataset RBAC
+                Faculty &amp; Academic Administrator
               </span>
             </div>
             <h1
@@ -315,24 +308,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         {/* Action Controls */}
         <div className="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
-          <button
-            onClick={() => onSwitchRole('user')}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-2 ${
-              isDarkMode
-                ? 'bg-[#0B1728] border-[#1E324F] text-[#C1CDDC] hover:text-[#FFF8ED]'
-                : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238] hover:bg-white'
-            }`}
-            title="Switch back to User view to test scholar experience"
-          >
-            <span>Test as Student User</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={onOpenRoleSelection}
-            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-[#E96746] hover:bg-[#D45333] text-white shadow-xs transition cursor-pointer"
-          >
-            Switch Demo Role
-          </button>
           <button
             onClick={() => setResetUserProgressModalOpen(true)}
             className="px-3.5 py-2.5 rounded-xl font-bold text-xs text-white bg-rose-600 hover:bg-rose-700 shadow-xs transition cursor-pointer flex items-center gap-1.5"

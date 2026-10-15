@@ -5,13 +5,15 @@ import { Lesson } from '../types';
 interface RestrictedAccessModalProps {
   lesson: Lesson;
   onClose: () => void;
-  onSwitchToAdmin: () => void;
+  onAuthenticateAsAdmin?: () => void;
+  onSwitchToAdmin?: () => void;
   isDarkMode?: boolean;
 }
 
 export const RestrictedAccessModal: React.FC<RestrictedAccessModalProps> = ({
   lesson,
   onClose,
+  onAuthenticateAsAdmin,
   onSwitchToAdmin,
   isDarkMode = false
 }) => {
@@ -111,11 +113,11 @@ export const RestrictedAccessModal: React.FC<RestrictedAccessModalProps> = ({
           {/* Action Buttons */}
           <div className="space-y-2.5 pt-2">
             <button
-              onClick={onSwitchToAdmin}
+              onClick={onAuthenticateAsAdmin || onSwitchToAdmin}
               className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-xs flex items-center justify-center gap-2 cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] transition-all hover:scale-101"
             >
               <Shield className="w-4 h-4" />
-              <span>Switch to Admin Role to Unlock</span>
+              <span>Sign In with Admin Credentials to Unlock</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button

@@ -13,6 +13,8 @@ import {
   Info
 } from 'lucide-react';
 import { UserRole } from '../types';
+import { UserAvatar } from './UserAvatar';
+import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 interface RoleSelectScreenProps {
   onSelectRole: (role: UserRole) => void;
@@ -78,14 +80,23 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
           )}
 
           <div className="space-y-5">
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xs ${
-                isDarkMode
-                  ? 'bg-[#1E324F] border-[#1E324F] text-[#F07856]'
-                  : 'bg-[#FDECE7] border-[#E96746]/20 text-[#E96746]'
-              }`}
-            >
-              <GraduationCap className="w-7 h-7" />
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                src=""
+                name="Dev Purecha"
+                size="lg"
+                ring={true}
+                ringClassName="ring-2 ring-[#E96746]/50"
+              />
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-xs ${
+                  isDarkMode
+                    ? 'bg-[#1E324F] border-[#1E324F] text-[#F07856]'
+                    : 'bg-[#FDECE7] border-[#E96746]/20 text-[#E96746]'
+                }`}
+              >
+                <GraduationCap className="w-6 h-6" />
+              </div>
             </div>
 
             <div>
@@ -184,14 +195,23 @@ export const RoleSelectScreen: React.FC<RoleSelectScreenProps> = ({
           )}
 
           <div className="space-y-5">
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center border shadow-xs ${
-                isDarkMode
-                  ? 'bg-[#1E324F] border-[#1E324F] text-[#F07856]'
-                  : 'bg-[#FDECE7] border-[#E96746]/20 text-[#E96746]'
-              }`}
-            >
-              <Shield className="w-7 h-7" />
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                src={PROF_ANJALI_SANE_AVATAR}
+                name="Prof. Dr. Anjali Sane"
+                size="lg"
+                ring={true}
+                ringClassName="ring-2 ring-amber-500/60"
+              />
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center border shadow-xs ${
+                  isDarkMode
+                    ? 'bg-[#1E324F] border-[#1E324F] text-[#F07856]'
+                    : 'bg-[#FDECE7] border-[#E96746]/20 text-[#E96746]'
+                }`}
+              >
+                <Shield className="w-6 h-6" />
+              </div>
             </div>
 
             <div>

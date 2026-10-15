@@ -15,7 +15,6 @@ import { QuizModal } from './components/QuizModal';
 import { LegalCenterModal } from './components/LegalCenterModal';
 import { LegalView } from './components/LegalView';
 import { AffirmativeConsentModal } from './components/AffirmativeConsentModal';
-import { RoleSelectScreen } from './components/RoleSelectScreen';
 import { RestrictedAccessModal } from './components/RestrictedAccessModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AuthScreen } from './components/AuthScreen';
@@ -66,8 +65,21 @@ export default function App() {
     }
   }, [isDarkMode]);
 
+  // Supported application tabs
+  const VALID_TABS: ActiveTab[] = ['dashboard', 'tracks', 'practice', 'leaderboard', 'profile', 'legal', 'admin'];
+
   // Navigation & View state
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (VALID_TABS.includes(hash as ActiveTab)) {
+        return hash as ActiveTab;
+      }
+    } catch {
+      // Ignore
+    }
+    return 'dashboard';
+  });
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
   // Authentication & Session state
@@ -75,15 +87,73 @@ export default function App() {
     return authService.getCurrentSession();
   });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [securityNotice, setSecurityNotice] = useState<string | null>(null);
+  const [loginInitialTab, setLoginInitialTab] = useState<UserRole>('user');
 
-  // Demo Role state (Phase 2 RBAC)
-  const [currentRole, setCurrentRole] = useState<UserRole>(() => {
-    const session = authService.getCurrentSession();
-    if (session) return session.role;
-    return dataService.getCurrentRole();
-  });
-  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  // Strict role derivation: role MUST come directly from the cryptographically verified session
+  const currentRole: UserRole = currentSession ? currentSession.role : 'user';
+
   const [restrictedLessonModal, setRestrictedLessonModal] = useState<Lesson | null>(null);
+
+  // Security enforcement: Immediately clear User session and redirect to login if Admin access is attempted
+  const handleUnauthorizedAdminAttempt = (reason: string) => {
+    authService.logout();
+    dataService.setRole(null);
+    setCurrentSession(null);
+    setRestrictedLessonModal(null);
+    setActiveLessonModal(null);
+    setActiveQuizModal(null);
+    setIsAuthModalOpen(false);
+    setLoginInitialTab('admin');
+    setSecurityNotice(reason);
+
+    if (window.location.hash === '#admin') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    setActiveTab('dashboard');
+    showToast(reason, undefined, 'info');
+  };
+
+  // Route protection against direct URL navigation, bookmarking, and browser back/forward history
+  useEffect(() => {
+    const handleHashSync = () => {
+      const rawHash = window.location.hash.replace('#', '').toLowerCase();
+      if (!rawHash) return;
+
+      if (rawHash === 'admin') {
+        const session = authService.getCurrentSession();
+        if (!session || session.role !== 'admin') {
+          handleUnauthorizedAdminAttempt(
+            'Security Enforcement: Direct navigation to Admin route from non-admin session is prohibited. Session cleared. Administrator credentials required.'
+          );
+          return;
+        }
+      }
+
+      if (VALID_TABS.includes(rawHash as ActiveTab)) {
+        setActiveTab(rawHash as ActiveTab);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashSync);
+    window.addEventListener('popstate', handleHashSync);
+
+    // Initial check on mount
+    const initialHash = window.location.hash.replace('#', '').toLowerCase();
+    if (initialHash === 'admin') {
+      const session = authService.getCurrentSession();
+      if (!session || session.role !== 'admin') {
+        handleUnauthorizedAdminAttempt(
+          'Security Enforcement: Admin route requires fresh Administrator authentication.'
+        );
+      }
+    }
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashSync);
+      window.removeEventListener('popstate', handleHashSync);
+    };
+  }, []);
 
   // Data state
   const [userProfile, setUserProfile] = useState<UserProfile>(() => dataService.getUserProfile(currentRole));
@@ -95,6 +165,25 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(() =>
     dataService.getLeaderboard()
   );
+
+  // Sync profile, lessons & leaderboard helper
+  const refreshState = () => {
+    const activeR = authService.getCurrentSession()?.role || 'user';
+    const updatedProfile = dataService.getUserProfile(activeR);
+    setUserProfile(updatedProfile);
+    setLessons(dataService.getLessons());
+    setSpacedDeck(dataService.getSpacedRepetitionDeck(activeR));
+    setLeaderboard(dataService.getLeaderboard());
+  };
+
+  // Keep in-memory profile and deck aligned whenever the active session changes
+  useEffect(() => {
+    if (currentSession) {
+      dataService.setRole(currentSession.role);
+      setUserProfile(dataService.getUserProfile(currentSession.role));
+      setSpacedDeck(dataService.getSpacedRepetitionDeck(currentSession.role));
+    }
+  }, [currentSession]);
 
   // Modals state
   const [activeLessonModal, setActiveLessonModal] = useState<Lesson | null>(null);
@@ -133,22 +222,12 @@ export default function App() {
     }, 3500);
   };
 
-  // Sync profile, lessons & leaderboard helper
-  const refreshState = () => {
-    const activeR = dataService.getCurrentRole();
-    const updatedProfile = dataService.getUserProfile(activeR);
-    setUserProfile(updatedProfile);
-    setLessons(dataService.getLessons());
-    setSpacedDeck(dataService.getSpacedRepetitionDeck(activeR));
-    setLeaderboard(dataService.getLeaderboard());
-  };
-
   // Login & Session handlers
   const handleLoginSuccess = (session: { email: string; role: UserRole; displayName: string }) => {
     const freshSession = authService.getCurrentSession();
     setCurrentSession(freshSession);
-    setCurrentRole(session.role);
     dataService.setRole(session.role);
+    setSecurityNotice(null);
     setIsAuthModalOpen(false);
     refreshState();
     showToast(
@@ -160,58 +239,60 @@ export default function App() {
 
   const handleLogout = () => {
     authService.logout();
+    dataService.setRole(null);
     setCurrentSession(null);
-    setIsRoleModalOpen(false);
+    setSecurityNotice(null);
+    setLoginInitialTab(currentRole === 'admin' ? 'admin' : 'user');
+    if (window.location.hash === '#admin') {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    setActiveTab('dashboard');
     showToast('You have signed out of FinLingo.', undefined, 'info');
   };
 
-  // Role selection & switching
-  const handleSelectRole = (role: UserRole) => {
-    dataService.setRole(role);
-    setCurrentRole(role);
-    setIsRoleModalOpen(false);
-
-    // Keep active session in sync with role switch
-    const targetEmail = role === 'admin' ? 'admin@finlingo.local' : 'learner@finlingo.local';
-    const targetName = role === 'admin' ? 'Prof. Dr. Anjali Sane' : 'Dev Purecha';
-    setCurrentSession({
-      email: targetEmail,
-      role,
-      displayName: targetName,
-      sessionToken: 'local_switch_' + Date.now(),
-      sessionEpoch: Date.now(),
-      loginTime: Date.now()
-    });
-
-    refreshState();
-    if (role === 'user' && activeTab === 'admin') {
-      setActiveTab('dashboard');
-    }
-    showToast(
-      role === 'admin'
-        ? 'Switched to Faculty Admin Profile (Prof. Dr. Anjali Sane)'
-        : 'Switched to College Scholar Profile (Dev Purecha)',
-      undefined,
-      'streak'
-    );
-  };
-
   const handleSetActiveTab = (tab: ActiveTab) => {
-    // Application-logic level protection:
-    if (tab === 'admin' && currentRole !== 'admin') {
-      showToast('Access Denied: Admin role required for Admin Panel', undefined, 'xp');
-      return;
+    // Application-logic level protection against Admin route access
+    if (tab === 'admin') {
+      const session = authService.getCurrentSession();
+      if (!session || session.role !== 'admin') {
+        handleUnauthorizedAdminAttempt(
+          'Security Enforcement: Access Denied. Admin role required for Admin Panel. Session terminated. Administrator credentials required.'
+        );
+        return;
+      }
     }
     setActiveTab(tab);
+    window.location.hash = tab;
   };
 
-  // Lesson actions (Protected by RBAC check)
+  // Lesson actions (Protected by RBAC check: unauthorized admin lesson access terminates user session)
   const handleOpenLesson = (lesson: Lesson) => {
-    if (currentRole !== 'admin' && lesson.isAdminOnly) {
-      setRestrictedLessonModal(lesson);
+    if (lesson.isAdminOnly && currentRole !== 'admin') {
+      handleUnauthorizedAdminAttempt(
+        `Security Enforcement: Attempted access to Admin-only academic module ("${lesson.title}"). Active session terminated. Administrator credentials required.`
+      );
       return;
     }
     setActiveLessonModal(lesson);
+  };
+
+  // Quiz actions (Protected by RBAC check: unauthorized admin quiz access terminates user session)
+  const handleStartQuiz = (lesson: Lesson) => {
+    if (lesson.isAdminOnly && currentRole !== 'admin') {
+      handleUnauthorizedAdminAttempt(
+        `Security Enforcement: Attempted quiz on Admin-only academic module ("${lesson.title}"). Active session terminated. Administrator credentials required.`
+      );
+      return;
+    }
+    let questions = dataService.getQuestionsByLesson(lesson.id);
+    if (!questions || questions.length === 0) {
+      questions = dataService.getQuestionsByTrack(lesson.trackId);
+    }
+    if (questions && questions.length > 0) {
+      setActiveQuizModal({ lesson, questions });
+    } else {
+      showToast('Practice quiz loaded', undefined, 'xp');
+    }
   };
 
   const handleCompleteLesson = (lessonId: string, xpValue: number) => {
@@ -243,23 +324,6 @@ export default function App() {
   const handleToggleBookmark = (lessonId: string) => {
     dataService.toggleBookmarkLesson(lessonId);
     refreshState();
-  };
-
-  // Quiz actions (Protected by RBAC check)
-  const handleStartQuiz = (lesson: Lesson) => {
-    if (currentRole !== 'admin' && lesson.isAdminOnly) {
-      setRestrictedLessonModal(lesson);
-      return;
-    }
-    let questions = dataService.getQuestionsByLesson(lesson.id);
-    if (!questions || questions.length === 0) {
-      questions = dataService.getQuestionsByTrack(lesson.trackId);
-    }
-    if (questions && questions.length > 0) {
-      setActiveQuizModal({ lesson, questions });
-    } else {
-      showToast('Practice quiz loaded', undefined, 'xp');
-    }
   };
 
   const handleQuizComplete = (results: {
@@ -348,15 +412,15 @@ export default function App() {
   };
 
   const handleResetData = (target?: 'user' | 'admin' | 'all') => {
+    if (currentRole !== 'admin') {
+      showToast('Action restricted: Only administrators can reset progress data.', undefined, 'info');
+      return;
+    }
     const roleTarget = target ?? currentRole;
     dataService.restoreDefaultData(roleTarget);
     refreshState();
     showToast(
-      roleTarget === 'admin'
-        ? 'Admin Profile & Settings Restored to Defaults'
-        : roleTarget === 'user'
-        ? 'Dev Purecha Progress Restored to Defaults'
-        : 'All Sample Data Restored to Defaults',
+      'Admin Profile & Settings Restored to Defaults',
       undefined,
       'success'
     );
@@ -372,7 +436,8 @@ export default function App() {
       >
         <AuthScreen
           onLoginSuccess={handleLoginSuccess}
-          initialRoleTab={currentRole}
+          initialRoleTab={loginInitialTab}
+          securityNotice={securityNotice}
           isDarkMode={isDarkMode}
         />
         {toastMessage && (
@@ -409,7 +474,6 @@ export default function App() {
         onLogout={handleLogout}
         spacedRepetitionDueCount={spacedDeck.length}
         onOpenLegalCenter={() => handleOpenLegalCenter('privacy')}
-        onOpenRoleSelection={() => setIsRoleModalOpen(true)}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
       />
@@ -474,7 +538,6 @@ export default function App() {
             currentRole={currentRole}
             accountEmail={currentSession?.email}
             onLogout={handleLogout}
-            onOpenRoleSelection={() => setIsRoleModalOpen(true)}
             onUpdateProfile={handleUpdateProfile}
             onResetData={handleResetData}
             onOpenLegalCenter={handleOpenLegalCenter}
@@ -487,6 +550,7 @@ export default function App() {
         {activeTab === 'legal' && (
           <LegalView
             userProfile={userProfile}
+            currentRole={currentRole}
             onUpdateProfile={handleUpdateProfile}
             onResetData={handleResetData}
             isDarkMode={isDarkMode}
@@ -500,8 +564,9 @@ export default function App() {
             leaderboard={leaderboard}
             userProfile={currentRole === 'admin' ? dataService.getUserProfile('user') : userProfile}
             onRefreshData={refreshState}
-            onSwitchRole={handleSelectRole}
-            onOpenRoleSelection={() => setIsRoleModalOpen(true)}
+            onUnauthorized={() =>
+              handleUnauthorizedAdminAttempt('Security Notice: Admin authorization required. Session terminated.')
+            }
             showToast={showToast}
             isDarkMode={isDarkMode}
           />
@@ -573,14 +638,17 @@ export default function App() {
                 Leaderboard
               </button>
               <span>•</span>
-              <button
-                onClick={() => setIsRoleModalOpen(true)}
-                className="text-[#E96746] dark:text-[#F07856] hover:underline font-bold transition cursor-pointer inline-flex items-center gap-1"
-                title="Switch demo role between College Scholar and Academic Admin"
+              <span
+                className="text-[#E96746] dark:text-[#F07856] font-bold inline-flex items-center gap-1 select-none"
+                title={`Active Role: ${
+                  currentRole === 'admin'
+                    ? 'Faculty Admin (Prof. Dr. Anjali Sane)'
+                    : 'College Scholar (Dev Purecha)'
+                }`}
               >
                 <Shield className="w-3 h-3" />
-                <span>Role: {currentRole === 'admin' ? 'Admin' : 'Student'}</span>
-              </button>
+                <span>Role: {currentRole === 'admin' ? 'Faculty Admin' : 'College Scholar'}</span>
+              </span>
               {currentRole === 'admin' && (
                 <>
                   <span>•</span>
@@ -745,6 +813,7 @@ export default function App() {
         onClose={() => setIsLegalModalOpen(false)}
         initialDocId={selectedLegalDocId}
         userProfile={userProfile}
+        currentRole={currentRole}
         onUpdateProfile={handleUpdateProfile}
         onResetData={handleResetData}
         isDarkMode={isDarkMode}
@@ -764,30 +833,12 @@ export default function App() {
         <RestrictedAccessModal
           lesson={restrictedLessonModal}
           onClose={() => setRestrictedLessonModal(null)}
-          onSwitchToAdmin={() => {
+          onAuthenticateAsAdmin={() => {
             setRestrictedLessonModal(null);
-            handleSelectRole('admin');
+            handleUnauthorizedAdminAttempt('Administrator credentials required to unlock module.');
           }}
           isDarkMode={isDarkMode}
         />
-      )}
-
-      {/* Demo Role Selection Modal / Screen */}
-      {isRoleModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4">
-          <div className="w-full max-w-5xl my-auto">
-            <RoleSelectScreen
-              currentRole={currentRole}
-              onSelectRole={handleSelectRole}
-              onCancel={() => setIsRoleModalOpen(false)}
-              onOpenLogin={() => {
-                setIsRoleModalOpen(false);
-                setIsAuthModalOpen(true);
-              }}
-              isDarkMode={isDarkMode}
-            />
-          </div>
-        </div>
       )}
 
       {/* Toast Notification */}
