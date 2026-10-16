@@ -237,7 +237,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
           return (
             <div
               key={lesson.id}
-              className={`rounded-2xl border transition-all duration-200 shadow-2xs hover:shadow-md flex flex-col justify-between p-5 sm:p-6 ${
+              className={`rounded-2xl border transition-all duration-200 shadow-2xs hover:shadow-md flex flex-col justify-between p-5 sm:p-6 card-interactive hover-lift ${
                 isDarkMode
                   ? isCompleted
                     ? 'bg-[#132238] border-[#16A34A]/40'
@@ -382,7 +382,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onOpenLesson(lesson)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer btn-interactive hover-lift ${
                       lesson.isAdminOnly && currentRole !== 'admin'
                         ? 'border border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10'
                         : isDarkMode
@@ -395,7 +395,7 @@ export const TracksView: React.FC<TracksViewProps> = ({
                   </button>
                   <button
                     onClick={() => onStartQuiz(lesson)}
-                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer ${
+                    className={`px-3.5 py-1.5 rounded-lg text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer btn-interactive hover-lift ${
                       lesson.isAdminOnly && currentRole !== 'admin'
                         ? 'bg-amber-600 hover:bg-amber-700 text-white'
                         : 'bg-[#F07856] hover:bg-[#D95D3B] text-white'

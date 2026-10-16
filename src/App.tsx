@@ -18,9 +18,11 @@ import { AffirmativeConsentModal } from './components/AffirmativeConsentModal';
 import { RestrictedAccessModal } from './components/RestrictedAccessModal';
 import { AdminPanel } from './components/AdminPanel';
 import { AuthScreen } from './components/AuthScreen';
+import { AgeGateScreen } from './components/AgeGateScreen';
 
 import { dataService } from './services/dataService';
 import { authService, ActiveSession } from './services/authService';
+import { eligibilityService } from './services/eligibilityService';
 import {
   ActiveTab,
   UserProfile,
@@ -78,6 +80,10 @@ export default function App() {
   const [currentSession, setCurrentSession] = useState<ActiveSession | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [securityNotice, setSecurityNotice] = useState<string | null>(null);
+
+  // Age verification state: Admin is exempt. User must confirm on every fresh login (including reload).
+  const [isAgeConfirmedForSession, setIsAgeConfirmedForSession] = useState(false);
+
   const [loginInitialTab, setLoginInitialTab] = useState<UserRole>(() => {
     try {
       const hash = window.location.hash.replace('#', '').toLowerCase();
@@ -98,6 +104,7 @@ export default function App() {
     authService.logout();
     dataService.setRole(null);
     setCurrentSession(null);
+    setIsAgeConfirmedForSession(false);
     setRestrictedLessonModal(null);
     setActiveLessonModal(null);
     setActiveQuizModal(null);
@@ -236,25 +243,18 @@ export default function App() {
     setSecurityNotice(null);
     setIsAuthModalOpen(false);
 
-    // Route properly according to role and URL hash
+    // Route properly according to role: Admin goes directly to Admin interface without age gate. User requires age verification.
     const rawHash = window.location.hash.replace('#', '').toLowerCase();
     if (session.role === 'admin') {
-      if (rawHash === 'admin') {
-        setActiveTab('admin');
-      } else if (VALID_TABS.includes(rawHash as ActiveTab)) {
-        setActiveTab(rawHash as ActiveTab);
-      } else {
-        setActiveTab('dashboard');
-      }
+      setIsAgeConfirmedForSession(true);
+      setActiveTab('admin');
+      window.location.hash = 'admin';
     } else {
-      // User / Learner: block access to admin hash and route to dashboard
+      // User / Learner: Show age verification screen after every successful login
+      setIsAgeConfirmedForSession(false);
+      setActiveTab('dashboard');
       if (rawHash === 'admin') {
         window.history.replaceState(null, '', window.location.pathname);
-        setActiveTab('dashboard');
-      } else if (VALID_TABS.includes(rawHash as ActiveTab) && rawHash !== 'admin') {
-        setActiveTab(rawHash as ActiveTab);
-      } else {
-        setActiveTab('dashboard');
       }
     }
 
@@ -270,6 +270,7 @@ export default function App() {
     authService.logout();
     dataService.setRole(null);
     setCurrentSession(null);
+    setIsAgeConfirmedForSession(false);
     setSecurityNotice(null);
     setLoginInitialTab(currentRole === 'admin' ? 'admin' : 'user');
     if (window.location.hash === '#admin') {
@@ -455,11 +456,11 @@ export default function App() {
     );
   };
 
-  // Render AuthScreen if user is not authenticated or if modal is opened
+  // 1. Render AuthScreen if user is not authenticated or if modal is opened
   if (!currentSession || isAuthModalOpen) {
     return (
       <div
-        className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
+        className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-250 animate-fade-in ${
           isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
         }`}
       >
@@ -470,16 +471,110 @@ export default function App() {
           isDarkMode={isDarkMode}
         />
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-200">
+          <div className="fixed bottom-6 right-6 z-50 animate-fade-in-up">
             <div
-              className={`p-4 rounded-2xl shadow-xl border flex items-center gap-3 ${
+              className={`p-4 rounded-2xl shadow-2xl border flex items-center gap-3 transition-all ${
                 isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
               }`}
             >
-              <div className="w-8 h-8 rounded-xl bg-[#E96746] text-white flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4" />
+              <div
+                className={`w-9 h-9 rounded-xl text-white flex items-center justify-center shrink-0 ${
+                  toastMessage.icon === 'streak'
+                    ? 'bg-amber-500 animate-flame'
+                    : toastMessage.icon === 'xp'
+                    ? 'bg-[#E96746] animate-pop'
+                    : toastMessage.icon === 'info'
+                    ? 'bg-blue-600'
+                    : 'bg-emerald-600 animate-success-bounce'
+                }`}
+              >
+                {toastMessage.icon === 'streak' ? (
+                  <Flame className="w-4 h-4 fill-white" />
+                ) : toastMessage.icon === 'xp' ? (
+                  <Sparkles className="w-4 h-4" />
+                ) : toastMessage.icon === 'info' ? (
+                  <Info className="w-4 h-4" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
               </div>
-              <span className="font-bold text-xs">{toastMessage.title}</span>
+              <div>
+                <span className="font-bold text-xs block leading-tight">{toastMessage.title}</span>
+                {toastMessage.xp !== undefined && (
+                  <span className="text-[11px] font-extrabold text-[#E96746] dark:text-[#F07856]">
+                    +{toastMessage.xp} XP
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. User Role: Mandatory Age Verification Screen on every fresh login (Admin is never prompted)
+  if (currentRole === 'user' && !isAgeConfirmedForSession) {
+    return (
+      <div
+        className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-250 animate-fade-in ${
+          isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
+        }`}
+      >
+        <AgeGateScreen
+          userEmail={currentSession.email}
+          userName={currentSession.displayName}
+          userRole={currentRole}
+          isDarkMode={isDarkMode}
+          onConfirmEligibility={() => {
+            setIsAgeConfirmedForSession(true);
+            eligibilityService.confirmEligibility(currentSession.email, currentRole);
+            showToast('Age eligibility confirmed. Welcome to FinLingo!', undefined, 'success');
+          }}
+          onMarkUnder13={() => {
+            eligibilityService.markUnder13(currentSession.email, currentRole);
+          }}
+          onClearUnder13={() => {
+            eligibilityService.clearUnder13Flag(currentSession.email, currentRole);
+          }}
+          onLogout={handleLogout}
+        />
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 animate-fade-in-up">
+            <div
+              className={`p-4 rounded-2xl shadow-2xl border flex items-center gap-3 transition-all ${
+                isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
+              }`}
+            >
+              <div
+                className={`w-9 h-9 rounded-xl text-white flex items-center justify-center shrink-0 ${
+                  toastMessage.icon === 'streak'
+                    ? 'bg-amber-500 animate-flame'
+                    : toastMessage.icon === 'xp'
+                    ? 'bg-[#E96746] animate-pop'
+                    : toastMessage.icon === 'info'
+                    ? 'bg-blue-600'
+                    : 'bg-emerald-600 animate-success-bounce'
+                }`}
+              >
+                {toastMessage.icon === 'streak' ? (
+                  <Flame className="w-4 h-4 fill-white" />
+                ) : toastMessage.icon === 'xp' ? (
+                  <Sparkles className="w-4 h-4" />
+                ) : toastMessage.icon === 'info' ? (
+                  <Info className="w-4 h-4" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+              </div>
+              <div>
+                <span className="font-bold text-xs block leading-tight">{toastMessage.title}</span>
+                {toastMessage.xp !== undefined && (
+                  <span className="text-[11px] font-extrabold text-[#E96746] dark:text-[#F07856]">
+                    +{toastMessage.xp} XP
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -489,7 +584,7 @@ export default function App() {
 
   return (
     <div
-      className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-200 ${
+      className={`min-h-screen font-sans flex flex-col selection:bg-[#E96746] selection:text-white transition-colors duration-250 animate-fade-in ${
         isDarkMode ? 'bg-[#0B1728] text-[#FFF8ED]' : 'bg-[#FFF8ED] text-[#263238]'
       }`}
     >
@@ -507,99 +602,102 @@ export default function App() {
         onToggleDarkMode={handleToggleDarkMode}
       />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with Smooth Tab Transitions */}
       <main className="flex-1 pb-16">
-        {activeTab === 'dashboard' && (
-          <DashboardView
-            userProfile={userProfile}
-            tracks={tracks}
-            lessons={lessons}
-            currentRole={currentRole}
-            spacedRepetitionDueCount={spacedDeck.length}
-            spacedRepetitionItems={spacedDeck}
-            leaderboard={leaderboard}
-            onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
-            onOpenLesson={handleOpenLesson}
-            onStartQuiz={handleStartQuiz}
-            setActiveTab={handleSetActiveTab}
-            onOpenPractice={() => handleSetActiveTab('practice')}
-            isDarkMode={isDarkMode}
-          />
-        )}
+        <div key={activeTab} className="animate-fade-in-up">
+          {activeTab === 'dashboard' && (
+            <DashboardView
+              userProfile={userProfile}
+              tracks={tracks}
+              lessons={lessons}
+              currentRole={currentRole}
+              spacedRepetitionDueCount={spacedDeck.length}
+              spacedRepetitionItems={spacedDeck}
+              leaderboard={leaderboard}
+              onSelectTrack={(trackId) => setSelectedTrackId(trackId)}
+              onOpenLesson={handleOpenLesson}
+              onStartQuiz={handleStartQuiz}
+              setActiveTab={handleSetActiveTab}
+              onOpenPractice={() => handleSetActiveTab('practice')}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-        {activeTab === 'tracks' && (
-          <TracksView
-            tracks={tracks}
-            lessons={lessons}
-            userProfile={userProfile}
-            selectedTrackId={selectedTrackId}
-            currentRole={currentRole}
-            onSelectTrackId={setSelectedTrackId}
-            onOpenLesson={handleOpenLesson}
-            onStartQuiz={handleStartQuiz}
-            onToggleBookmark={handleToggleBookmark}
-            isDarkMode={isDarkMode}
-          />
-        )}
+          {activeTab === 'tracks' && (
+            <TracksView
+              tracks={tracks}
+              lessons={lessons}
+              userProfile={userProfile}
+              selectedTrackId={selectedTrackId}
+              currentRole={currentRole}
+              onSelectTrackId={setSelectedTrackId}
+              onOpenLesson={handleOpenLesson}
+              onStartQuiz={handleStartQuiz}
+              onToggleBookmark={handleToggleBookmark}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-        {activeTab === 'practice' && (
-          <SpacedRepetitionView
-            items={spacedDeck}
-            userProfile={userProfile}
-            onAdvanceItem={handleAdvanceSpacedItem}
-            onRemoveItem={handleRemoveSpacedItem}
-            onNavigateToTracks={() => handleSetActiveTab('tracks')}
-            isDarkMode={isDarkMode}
-          />
-        )}
+          {activeTab === 'practice' && (
+            <SpacedRepetitionView
+              items={spacedDeck}
+              userProfile={userProfile}
+              onAdvanceItem={handleAdvanceSpacedItem}
+              onRemoveItem={handleRemoveSpacedItem}
+              onNavigateToTracks={() => handleSetActiveTab('tracks')}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-        {activeTab === 'leaderboard' && (
-          <LeaderboardView
-            entries={leaderboard}
-            userProfile={userProfile}
-            isDarkMode={isDarkMode}
-          />
-        )}
+          {activeTab === 'leaderboard' && (
+            <LeaderboardView
+              entries={leaderboard}
+              userProfile={userProfile}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-        {activeTab === 'profile' && (
-          <ProfileView
-            userProfile={userProfile}
-            currentRole={currentRole}
-            accountEmail={currentSession?.email}
-            onLogout={handleLogout}
-            onUpdateProfile={handleUpdateProfile}
-            onResetData={handleResetData}
-            onOpenLegalCenter={handleOpenLegalCenter}
-            onOpenConsentModal={() => setIsConsentModalOpen(true)}
-            isDarkMode={isDarkMode}
-            onToggleDarkMode={handleToggleDarkMode}
-          />
-        )}
+          {activeTab === 'profile' && (
+            <ProfileView
+              userProfile={userProfile}
+              currentRole={currentRole}
+              accountEmail={currentSession?.email}
+              onLogout={handleLogout}
+              onUpdateProfile={handleUpdateProfile}
+              onResetData={handleResetData}
+              onOpenLegalCenter={handleOpenLegalCenter}
+              onOpenConsentModal={() => setIsConsentModalOpen(true)}
+              onRevokeAgeEligibility={() => setIsAgeConfirmedForSession(false)}
+              isDarkMode={isDarkMode}
+              onToggleDarkMode={handleToggleDarkMode}
+            />
+          )}
 
-        {activeTab === 'legal' && (
-          <LegalView
-            userProfile={userProfile}
-            currentRole={currentRole}
-            onUpdateProfile={handleUpdateProfile}
-            onResetData={handleResetData}
-            isDarkMode={isDarkMode}
-          />
-        )}
+          {activeTab === 'legal' && (
+            <LegalView
+              userProfile={userProfile}
+              currentRole={currentRole}
+              onUpdateProfile={handleUpdateProfile}
+              onResetData={handleResetData}
+              isDarkMode={isDarkMode}
+            />
+          )}
 
-        {activeTab === 'admin' && (
-          <AdminPanel
-            currentRole={currentRole}
-            lessons={lessons}
-            leaderboard={leaderboard}
-            userProfile={currentRole === 'admin' ? dataService.getUserProfile('user') : userProfile}
-            onRefreshData={refreshState}
-            onUnauthorized={() =>
-              handleUnauthorizedAdminAttempt('Security Notice: Admin authorization required. Session terminated.')
-            }
-            showToast={showToast}
-            isDarkMode={isDarkMode}
-          />
-        )}
+          {activeTab === 'admin' && (
+            <AdminPanel
+              currentRole={currentRole}
+              lessons={lessons}
+              leaderboard={leaderboard}
+              userProfile={currentRole === 'admin' ? dataService.getUserProfile('user') : userProfile}
+              onRefreshData={refreshState}
+              onUnauthorized={() =>
+                handleUnauthorizedAdminAttempt('Security Notice: Admin authorization required. Session terminated.')
+              }
+              showToast={showToast}
+              isDarkMode={isDarkMode}
+            />
+          )}
+        </div>
       </main>
 
       {/* Footer with Statutory Legal & Privacy Framework */}

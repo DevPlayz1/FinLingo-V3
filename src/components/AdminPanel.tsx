@@ -499,7 +499,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#EDE3D2] dark:border-[#1E324F]">
         <button
           onClick={() => setAdminTab('lessons')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer btn-interactive active:scale-95 ${
             adminTab === 'lessons'
               ? 'bg-[#E96746] text-white shadow-xs'
               : isDarkMode
@@ -513,7 +513,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <button
           onClick={() => setAdminTab('questions')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer btn-interactive active:scale-95 ${
             adminTab === 'questions'
               ? 'bg-[#E96746] text-white shadow-xs'
               : isDarkMode
@@ -527,7 +527,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <button
           onClick={() => setAdminTab('leaderboard')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer btn-interactive active:scale-95 ${
             adminTab === 'leaderboard'
               ? 'bg-[#E96746] text-white shadow-xs'
               : isDarkMode
@@ -541,7 +541,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
         <button
           onClick={() => setAdminTab('security')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition whitespace-nowrap cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-200 whitespace-nowrap cursor-pointer btn-interactive active:scale-95 ${
             adminTab === 'security'
               ? 'bg-[#E96746] text-white shadow-xs'
               : isDarkMode

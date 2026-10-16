@@ -313,7 +313,7 @@ export const SpacedRepetitionView: React.FC<SpacedRepetitionViewProps> = ({
                       key={idx}
                       disabled={isAnswerSubmitted}
                       onClick={() => handleSelectAnswer(idx)}
-                      className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition text-sm sm:text-base font-medium shadow-2xs focus:outline-hidden ${btnStyle}`}
+                      className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all duration-200 text-sm sm:text-base font-medium shadow-2xs focus:outline-hidden card-interactive hover-lift ${btnStyle}`}
                     >
                       <div
                         className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 ${iconBg}`}
@@ -421,7 +421,7 @@ export const SpacedRepetitionView: React.FC<SpacedRepetitionViewProps> = ({
                         onAdvanceItem(currentItem.id, false);
                         handleNextCard();
                       }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#FEE2E2] text-[#7F1D1D] border border-[#DC2626]/20 hover:bg-[#DC2626]/10 transition"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#FEE2E2] text-[#7F1D1D] border border-[#DC2626]/20 hover:bg-[#DC2626]/10 transition cursor-pointer btn-interactive hover-lift"
                     >
                       Need Practice (Reset)
                     </button>
@@ -430,7 +430,7 @@ export const SpacedRepetitionView: React.FC<SpacedRepetitionViewProps> = ({
                         onAdvanceItem(currentItem.id, true);
                         handleNextCard();
                       }}
-                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#16A34A] text-white shadow-xs hover:bg-[#15803D] transition flex items-center gap-1.5"
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-[#16A34A] text-white shadow-xs hover:bg-[#15803D] transition flex items-center gap-1.5 cursor-pointer btn-interactive hover-lift"
                     >
                       <Check className="w-4 h-4" />
                       <span>Got It! (Advance Stage)</span>

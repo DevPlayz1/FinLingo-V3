@@ -119,19 +119,19 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 animate-scale-in">
         <div className="w-full max-w-lg">
           {!isUnderAgeView ? (
             /* Standard 13+ Eligibility Gate */
             <div
-              className={`p-6 sm:p-8 rounded-3xl border shadow-xl transition-all duration-300 animate-in fade-in zoom-in-95 ${
+              className={`p-6 sm:p-8 rounded-3xl border shadow-xl transition-all duration-300 ${
                 isDarkMode
                   ? 'bg-[#12233A] border-[#1E324F] shadow-black/40'
                   : 'bg-white border-[#EDE3D2] shadow-amber-900/5'
               }`}
             >
               {/* Shield Icon Badge */}
-              <div className="w-14 h-14 rounded-2xl bg-[#E96746]/10 text-[#E96746] dark:text-[#F07856] flex items-center justify-center mb-6 shadow-xs border border-[#E96746]/20">
+              <div className="w-14 h-14 rounded-2xl bg-[#E96746]/10 text-[#E96746] dark:text-[#F07856] flex items-center justify-center mb-6 shadow-xs border border-[#E96746]/20 transition-transform duration-200 hover:scale-105">
                 <Shield className="w-7 h-7" />
               </div>
 
@@ -151,7 +151,7 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
 
               {/* Account Identification Pill */}
               <div
-                className={`p-3.5 rounded-2xl border mb-6 flex items-center justify-between text-xs ${
+                className={`p-3.5 rounded-2xl border mb-6 flex items-center justify-between text-xs transition-colors duration-200 ${
                   isDarkMode
                     ? 'bg-[#0B1728]/60 border-[#1E324F] text-[#FFF8ED]'
                     : 'bg-[#FFF8ED] border-[#EDE3D2] text-[#263238]'
@@ -172,7 +172,7 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 animate-pulse">
                     Pending 13+
                   </span>
                 </div>
@@ -180,11 +180,11 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
 
               {/* Mandatory Confirmation Checkbox Card */}
               <div
-                className={`p-4 sm:p-5 rounded-2xl border mb-6 transition-all cursor-pointer select-none ${
+                className={`p-4 sm:p-5 rounded-2xl border mb-6 transition-all duration-200 cursor-pointer select-none hover-lift ${
                   isChecked
                     ? isDarkMode
-                      ? 'bg-emerald-500/10 border-emerald-500/40 text-[#FFF8ED]'
-                      : 'bg-emerald-50 border-emerald-300 text-[#173B63]'
+                      ? 'bg-emerald-500/10 border-emerald-500/40 text-[#FFF8ED] shadow-xs'
+                      : 'bg-emerald-50 border-emerald-300 text-[#173B63] shadow-xs'
                     : isDarkMode
                     ? 'bg-[#0B1728]/40 border-[#1E324F] hover:border-slate-500'
                     : 'bg-slate-50 border-[#EDE3D2] hover:border-slate-300'
@@ -196,7 +196,7 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
                     type="checkbox"
                     checked={isChecked}
                     onChange={(e) => setIsChecked(e.target.checked)}
-                    className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-400 text-[#E96746] focus:ring-[#E96746] cursor-pointer accent-[#E96746]"
+                    className="mt-0.5 w-5 h-5 rounded-md border-2 border-slate-400 text-[#E96746] focus:ring-[#E96746] cursor-pointer accent-[#E96746] transition-transform duration-150 active:scale-90"
                   />
                   <div className="flex-1">
                     <span className="font-bold text-sm block leading-snug">
@@ -216,7 +216,7 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
 
               {/* Privacy Notice Note */}
               <div
-                className={`p-3.5 rounded-xl border mb-6 space-y-1.5 text-[11px] leading-relaxed ${
+                className={`p-3.5 rounded-xl border mb-6 space-y-1.5 text-[11px] leading-relaxed transition-colors duration-200 ${
                   isDarkMode
                     ? 'bg-[#173B63]/20 border-[#1E324F] text-[#E8F0F8]/75'
                     : 'bg-blue-50/50 border-blue-100 text-[#173B63]/85'
@@ -242,12 +242,21 @@ export const AgeGateScreen: React.FC<AgeGateScreenProps> = ({
                   onClick={handleContinue}
                   className={`w-full py-3.5 px-6 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 shadow-md ${
                     isChecked && !isSubmitting
-                      ? 'bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] text-white cursor-pointer hover:shadow-lg active:scale-[0.99]'
+                      ? 'bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] text-white cursor-pointer hover:shadow-lg hover-lift btn-interactive'
                       : 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed opacity-60'
                   }`}
                 >
-                  <span>{isSubmitting ? 'Verifying Eligibility...' : 'Continue to FinLingo'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Verifying Eligibility...</span>
+                    </span>
+                  ) : (
+                    <>
+                      <span>Continue to FinLingo</span>
+                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
                 </button>
 
                 <div className="text-center pt-2">

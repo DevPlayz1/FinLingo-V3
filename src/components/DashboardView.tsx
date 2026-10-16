@@ -251,9 +251,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
          ========================================================================= */}
       <section aria-label="Key Statistics" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Card 1: Total Experience */}
-        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden ${cardBg} ${cardBorder}`}>
+        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden card-interactive hover-lift animate-fade-in-up stagger-1 ${cardBg} ${cardBorder}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-amber-100/70 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-amber-100/70 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 transition-transform duration-200 hover:scale-110">
               <Trophy className="w-4 h-4 fill-current" />
             </div>
             <div>
@@ -268,13 +268,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70 transition-all duration-300" />
         </div>
 
         {/* Card 2: Active Streak */}
-        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden ${cardBg} ${cardBorder}`}>
+        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden card-interactive hover-lift animate-fade-in-up stagger-2 ${cardBg} ${cardBorder}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-red-100/70 dark:bg-red-900/30 text-[#E96746] dark:text-[#F07856]">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-red-100/70 dark:bg-red-900/30 text-[#E96746] dark:text-[#F07856] animate-flame">
               <Flame className="w-4 h-4 fill-current" />
             </div>
             <div>
@@ -289,13 +289,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70 transition-all duration-300" />
         </div>
 
         {/* Card 3: Quiz Accuracy */}
-        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden ${cardBg} ${cardBorder}`}>
+        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden card-interactive hover-lift animate-fade-in-up stagger-3 ${cardBg} ${cardBorder}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-red-100/70 dark:bg-red-900/30 text-[#E96746] dark:text-[#F07856]">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-red-100/70 dark:bg-red-900/30 text-[#E96746] dark:text-[#F07856] transition-transform duration-200 hover:rotate-12">
               <Target className="w-4 h-4" />
             </div>
             <div>
@@ -309,13 +309,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70 transition-all duration-300" />
         </div>
 
         {/* Card 4: Review Items Due */}
-        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden ${cardBg} ${cardBorder}`}>
+        <div className={`p-4 rounded-2xl border shadow-xs transition-colors relative overflow-hidden card-interactive hover-lift animate-fade-in-up stagger-4 ${cardBg} ${cardBorder}`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-orange-100/70 dark:bg-orange-900/30 text-[#E96746] dark:text-[#F07856]">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-orange-100/70 dark:bg-orange-900/30 text-[#E96746] dark:text-[#F07856] transition-transform duration-200 hover:scale-110">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
@@ -329,11 +329,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70" />
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#E96746]/70 dark:bg-[#F07856]/70 transition-all duration-300" />
         </div>
 
         {/* Card 5: Keep Going! Card (Milestone Promo Tile) */}
-        <div className="col-span-2 md:col-span-1 p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3 shadow-2xs bg-[#FEF5F1] dark:bg-[#1E2E42] border-[#FCE0D4] dark:border-[#2A4365]">
+        <div className="col-span-2 md:col-span-1 p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3 shadow-2xs bg-[#FEF5F1] dark:bg-[#1E2E42] border-[#FCE0D4] dark:border-[#2A4365] card-interactive hover-lift animate-fade-in-up stagger-5">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-[#FDECE7] dark:bg-[#253952] text-[#E96746] dark:text-[#F07856]">
               <Award className="w-4 h-4" />
@@ -356,10 +356,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="text-emerald-600 dark:text-emerald-400 font-bold">Top Rank Reached</span>
                 )}
               </p>
-              {/* Mini level progress meter */}
+              {/* Mini level progress meter with smooth width transition */}
               <div className="w-full bg-slate-200 dark:bg-slate-700 h-1 rounded-full overflow-hidden mt-1.5">
                 <div
-                  className="bg-[#E96746] dark:bg-[#F07856] h-full rounded-full transition-all duration-300"
+                  className="bg-[#E96746] dark:bg-[#F07856] h-full rounded-full transition-progress"
                   style={{ width: `${levelProgress.percent}%` }}
                 />
               </div>
@@ -367,7 +367,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <button
             onClick={() => onOpenLesson(nextAvailableLesson)}
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white shadow-xs cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] transition-transform hover:scale-105"
+            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-white shadow-xs cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] btn-interactive hover-scale"
             title="Open Next Available Lesson"
           >
             <ArrowRight className="w-4 h-4" />

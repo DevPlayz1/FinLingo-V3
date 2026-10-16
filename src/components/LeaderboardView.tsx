@@ -87,12 +87,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         {/* Rank 2 (Silver) */}
         {top3[1] && (
           <div
-            className={`order-2 md:order-1 p-5 rounded-2xl border shadow-xs flex flex-col items-center text-center relative overflow-hidden transition-colors ${
-              isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
+            className={`order-2 md:order-1 p-5 rounded-2xl border shadow-xs flex flex-col items-center text-center relative overflow-hidden transition-all duration-200 card-interactive hover-lift animate-fade-in-up stagger-2 ${
+              isDarkMode ? 'bg-[#132238] border-[#1E324F]' : 'bg-white border-[#E8F0F8]'
             }`}
           >
             <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm mb-3 border ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm mb-3 border transition-transform duration-200 hover:scale-110 ${
                 isDarkMode
                   ? 'bg-[#1E3A5F] text-[#FFF8ED] border-[#1E3A5F]'
                   : 'bg-[#E8F0F8] text-[#173B63] border-[#173B63]/20'
@@ -105,7 +105,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               src={top3[1].isCurrentUser ? userProfile.avatar : top3[1].avatar}
               name={top3[1].isCurrentUser ? userProfile.displayName : top3[1].displayName}
               size="lg"
-              className="mb-2"
+              className="mb-2 transition-transform duration-200 hover:scale-105"
               ringClassName="ring-4 ring-[#E8F0F8]"
             />
 
@@ -125,7 +125,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               {top3[1].university}
             </span>
             <div
-              className={`mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+              className={`mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-transform duration-150 hover:scale-105 ${
                 isDarkMode ? 'bg-[#1E3A5F] text-[#FFF8ED]' : 'bg-[#E8F0F8] text-[#173B63]'
               }`}
             >
@@ -138,13 +138,13 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         {/* Rank 1 (Gold with Coral accent) */}
         {top3[0] && (
           <div
-            className={`order-1 md:order-2 p-6 rounded-2xl border-2 border-[#F07856] shadow-md flex flex-col items-center text-center relative overflow-hidden md:-mt-3 transition-colors ${
+            className={`order-1 md:order-2 p-6 rounded-2xl border-2 border-[#F07856] shadow-md flex flex-col items-center text-center relative overflow-hidden md:-mt-3 transition-all duration-200 card-interactive hover-lift animate-fade-in-up stagger-1 ${
               isDarkMode ? 'bg-[#132238]' : 'bg-white'
             }`}
           >
             <div className="absolute top-0 inset-x-0 h-1.5 bg-[#F07856]" />
             <div
-              className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-base mb-3 border shadow-sm ${
+              className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-base mb-3 border shadow-sm transition-transform duration-200 hover:scale-110 ${
                 isDarkMode
                   ? 'bg-[#1E3A5F] text-[#F07856] border-[#F07856]/40'
                   : 'bg-[#FCE5DC] text-[#F07856] border-[#F07856]/40'
@@ -157,7 +157,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               src={top3[0].isCurrentUser ? userProfile.avatar : top3[0].avatar}
               name={top3[0].isCurrentUser ? userProfile.displayName : top3[0].displayName}
               size="xl"
-              className="mb-2"
+              className="mb-2 transition-transform duration-200 hover:scale-105"
               ringClassName="ring-4 ring-[#FCE5DC]"
             />
 
@@ -176,7 +176,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               <GraduationCap className="w-3.5 h-3.5 text-[#F07856]" />
               {top3[0].university}
             </span>
-            <div className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FCE5DC] text-[#173B63] text-sm font-extrabold shadow-2xs">
+            <div className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FCE5DC] text-[#173B63] text-sm font-extrabold shadow-2xs transition-transform duration-150 hover:scale-105 animate-pop">
               <Sparkles className="w-4 h-4 text-[#F07856]" />
               <span>{top3[0].xp} XP</span>
             </div>
@@ -186,12 +186,12 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
         {/* Rank 3 (Bronze) */}
         {top3[2] && (
           <div
-            className={`order-3 md:order-3 p-5 rounded-2xl border shadow-xs flex flex-col items-center text-center relative overflow-hidden transition-colors ${
+            className={`order-3 md:order-3 p-5 rounded-2xl border shadow-xs flex flex-col items-center text-center relative overflow-hidden transition-all duration-200 card-interactive hover-lift animate-fade-in-up stagger-3 ${
               isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
             }`}
           >
             <div
-              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm mb-3 border ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm mb-3 border transition-transform duration-200 hover:scale-110 ${
                 isDarkMode
                   ? 'bg-[#1E3A5F] text-[#FFF8ED] border-[#1E3A5F]'
                   : 'bg-[#FFF8ED] text-[#263238] border-[#E8F0F8]'
@@ -204,7 +204,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               src={top3[2].isCurrentUser ? userProfile.avatar : top3[2].avatar}
               name={top3[2].isCurrentUser ? userProfile.displayName : top3[2].displayName}
               size="lg"
-              className="mb-2"
+              className="mb-2 transition-transform duration-200 hover:scale-105"
               ringClassName="ring-4 ring-[#FFF8ED]"
             />
 
@@ -224,7 +224,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               {top3[2].university}
             </span>
             <div
-              className={`mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+              className={`mt-3 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-transform duration-150 hover:scale-105 ${
                 isDarkMode ? 'bg-[#1E3A5F] text-[#FFF8ED]' : 'bg-[#E8F0F8] text-[#173B63]'
               }`}
             >
@@ -275,7 +275,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
             return (
               <div
                 key={entry.id}
-                className={`p-4 flex items-center justify-between gap-4 transition ${
+                className={`p-4 flex items-center justify-between gap-4 transition-all duration-150 card-interactive ${
                   isUser
                     ? isDarkMode
                       ? 'bg-[#1E3A5F]/70 border-l-4 border-[#F07856]'

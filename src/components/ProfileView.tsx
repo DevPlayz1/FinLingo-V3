@@ -1459,14 +1459,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     onChange={(e) => setNewPasswordInput(e.target.value)}
                     required
                     placeholder="Enter new password"
-                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm input-interactive focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
                       isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-70 hover:opacity-100 cursor-pointer"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-70 hover:opacity-100 cursor-pointer transition-transform duration-150 active:scale-90"
                   >
                     {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1486,7 +1486,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     onChange={(e) => setConfirmPasswordInput(e.target.value)}
                     required
                     placeholder="Confirm new password"
-                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
+                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm input-interactive focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${
                       isDarkMode ? 'bg-[#12233A] border-[#1E324F] text-[#FFF8ED]' : 'bg-white border-[#EDE3D2] text-[#263238]'
                     }`}
                   />

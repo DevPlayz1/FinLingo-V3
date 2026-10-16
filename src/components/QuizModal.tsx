@@ -547,19 +547,23 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                       type="button"
                       disabled={isAnswerSubmitted}
                       onClick={() => handleSelectOption(idx)}
-                      className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all text-sm sm:text-base font-medium shadow-2xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] ${buttonStyle}`}
+                      className={`w-full p-4 rounded-2xl border text-left flex items-start gap-3.5 transition-all duration-200 text-sm sm:text-base font-medium shadow-2xs focus:outline-hidden focus-visible:ring-2 focus-visible:ring-[#F07856] card-interactive hover-lift ${buttonStyle} ${
+                        isSelected && !isAnswerSubmitted ? 'scale-[1.01]' : ''
+                      }`}
                     >
                       <div
-                        className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 transition ${indicatorStyle}`}
+                        className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 transition-transform duration-200 ${indicatorStyle} ${
+                          isSelected ? 'scale-110' : ''
+                        }`}
                       >
                         {String.fromCharCode(65 + idx)}
                       </div>
                       <div className="flex-1 leading-snug">{option}</div>
                       {isAnswerSubmitted && isCorrect && (
-                        <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5 animate-success-bounce" />
                       )}
                       {isAnswerSubmitted && isSelected && !isCorrect && (
-                        <XCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
+                        <XCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5 animate-shake" />
                       )}
                     </button>
                   );
@@ -569,10 +573,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               {/* Feedback and Pedagogical Explanation after submission */}
               {isAnswerSubmitted && (
                 <div
-                  className={`p-5 rounded-2xl border transition-all ${
+                  className={`p-5 rounded-2xl border transition-all duration-300 ${
                     isCurrentCorrect
-                      ? 'bg-[#DCFCE7] border-[#16A34A]/40 text-[#14532D]'
-                      : 'bg-[#FEE2E2] border-[#DC2626]/40 text-[#7F1D1D]'
+                      ? 'bg-[#DCFCE7] border-[#16A34A]/40 text-[#14532D] animate-success-bounce'
+                      : 'bg-[#FEE2E2] border-[#DC2626]/40 text-[#7F1D1D] animate-shake'
                   }`}
                 >
                   <div className="flex items-center gap-2 font-extrabold text-sm sm:text-base mb-1.5">
@@ -595,7 +599,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
                   {!isCurrentCorrect && (
                     <div className="pt-2 border-t border-[#DC2626]/20 text-xs font-bold text-[#7F1D1D] flex items-center gap-1.5">
-                      <Brain className="w-4 h-4 text-[#F07856] shrink-0" />
+                      <Brain className="w-4 h-4 text-[#F07856] shrink-0 animate-pulse" />
                       <span>This question has been automatically queued to your Spaced Review Deck.</span>
                     </div>
                   )}
@@ -656,16 +660,16 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             }`}
           >
             <div
-              className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg ${
+              className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center shadow-lg animate-pop ${
                 isDarkMode
                   ? 'bg-[#132238] border border-[#1E3A5F]'
                   : 'bg-[#173B63] shadow-[#173B63]/20'
               }`}
             >
-              <Trophy className="w-10 h-10 text-[#F07856]" />
+              <Trophy className="w-10 h-10 text-[#F07856] animate-pulse" />
             </div>
 
-            <div>
+            <div className="animate-fade-in-up">
               <h3
                 className={`text-2xl sm:text-3xl font-extrabold ${
                   isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
@@ -685,10 +689,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               </p>
             </div>
 
-            {/* Score Metrics Grid */}
+            {/* Score Metrics Grid with Staggered Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-lg mx-auto">
               <div
-                className={`p-3.5 rounded-2xl border ${
+                className={`p-3.5 rounded-2xl border card-interactive hover-lift animate-fade-in-up stagger-1 ${
                   isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
                 }`}
               >
@@ -708,7 +712,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 </span>
               </div>
               <div
-                className={`p-3.5 rounded-2xl border ${
+                className={`p-3.5 rounded-2xl border card-interactive hover-lift animate-fade-in-up stagger-2 ${
                   isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
                 }`}
               >
@@ -728,7 +732,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 </span>
               </div>
               <div
-                className={`p-3.5 rounded-2xl border ${
+                className={`p-3.5 rounded-2xl border card-interactive hover-lift animate-fade-in-up stagger-3 ${
                   isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
                 }`}
               >
@@ -748,12 +752,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 </span>
               </div>
               <div
-                className={`p-3.5 rounded-2xl border ${
+                className={`p-3.5 rounded-2xl border card-interactive hover-lift animate-fade-in-up stagger-4 ${
                   isDarkMode ? 'bg-[#132238] border-[#F07856]/40' : 'bg-white border-[#FCE5DC]'
                 }`}
               >
                 <span className="text-xs text-[#F07856] font-bold block">XP Awarded</span>
-                <span className="text-xl sm:text-2xl font-extrabold text-[#F07856] flex items-center justify-center gap-1">
+                <span className="text-xl sm:text-2xl font-extrabold text-[#F07856] flex items-center justify-center gap-1 animate-pop">
                   <Sparkles className="w-4 h-4" />
                   +{sessionAwardedXp}
                 </span>

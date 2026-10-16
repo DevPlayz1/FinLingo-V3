@@ -129,16 +129,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       }`}
     >
       {/* Top Header & Brand Bar */}
-      <header className="max-w-5xl mx-auto w-full pt-2 sm:pt-6 flex items-center justify-between">
+      <header className="max-w-5xl mx-auto w-full pt-2 sm:pt-6 flex items-center justify-between animate-fade-in-down">
         <div className="flex items-center gap-3">
           <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs border ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs border transition-transform duration-200 hover:scale-105 ${
               isDarkMode
                 ? 'bg-[#12233A] border-[#1E324F]'
                 : 'bg-[#FDECE7] border-[#E96746]/25'
             }`}
           >
-            <Sparkles className="w-5 h-5 text-[#E96746] dark:text-[#F07856]" />
+            <Sparkles className="w-5 h-5 text-[#E96746] dark:text-[#F07856] animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -153,8 +153,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-md w-full mx-auto my-8">
-        <div className={`rounded-3xl p-6 sm:p-8 border shadow-lg space-y-6 transition-all ${cardBg} ${cardBorder}`}>
+      <main className="max-w-md w-full mx-auto my-8 animate-scale-in">
+        <div className={`rounded-3xl p-6 sm:p-8 border shadow-lg space-y-6 transition-all duration-200 ${cardBg} ${cardBorder}`}>
           {/* Header with Title & Subtitle */}
           <div className="space-y-1.5 text-center">
             <h1 className={`text-2xl sm:text-3xl font-black tracking-tight ${primaryText}`}>
@@ -167,7 +167,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
           {/* Security Notice Banner */}
           {securityNotice && (
-            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in duration-200">
+            <div className="p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-shake">
               <Shield className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
                 <span className="font-extrabold block">Access Protection Active</span>
@@ -177,16 +177,16 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           )}
 
           {/* Entry Options: User Login vs Admin Login Tabs */}
-          <div className={`grid grid-cols-2 p-1 rounded-2xl border ${cardBorder} ${inputBg}`}>
+          <div className={`grid grid-cols-2 p-1.5 rounded-2xl border ${cardBorder} ${inputBg} transition-colors duration-200`}>
             <button
               type="button"
               onClick={() => setSelectedRoleTab('user')}
-              className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                 selectedRoleTab === 'user'
-                  ? 'bg-[#E96746] text-white shadow-xs'
+                  ? 'bg-[#E96746] text-white shadow-xs scale-[1.02]'
                   : isDarkMode
-                  ? 'text-[#C1CDDC] hover:text-[#FFF8ED]'
-                  : 'text-[#52647A] hover:text-[#263238]'
+                  ? 'text-[#C1CDDC] hover:text-[#FFF8ED] hover:bg-white/5'
+                  : 'text-[#52647A] hover:text-[#263238] hover:bg-black/5'
               }`}
             >
               <GraduationCap className="w-4 h-4" />
@@ -196,12 +196,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <button
               type="button"
               onClick={() => setSelectedRoleTab('admin')}
-              className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                 selectedRoleTab === 'admin'
-                  ? 'bg-[#E96746] text-white shadow-xs'
+                  ? 'bg-[#E96746] text-white shadow-xs scale-[1.02]'
                   : isDarkMode
-                  ? 'text-[#C1CDDC] hover:text-[#FFF8ED]'
-                  : 'text-[#52647A] hover:text-[#263238]'
+                  ? 'text-[#C1CDDC] hover:text-[#FFF8ED] hover:bg-white/5'
+                  : 'text-[#52647A] hover:text-[#263238] hover:bg-black/5'
               }`}
             >
               <Shield className="w-4 h-4" />
@@ -209,9 +209,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             </button>
           </div>
 
-          {/* Account Role Info Callout */}
+          {/* Account Role Info Callout with smooth fade/scale */}
           <div
-            className={`p-3 rounded-xl border flex items-center justify-between text-xs ${
+            key={selectedRoleTab}
+            className={`p-3 rounded-xl border flex items-center justify-between text-xs animate-fade-in ${
               selectedRoleTab === 'admin'
                 ? 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-300'
                 : 'bg-[#E96746]/10 border-[#E96746]/20 text-[#E96746] dark:text-[#F07856]'
@@ -248,7 +249,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
 
           {/* Error & Info Alerts */}
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2.5 animate-in fade-in duration-150">
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start gap-2.5 animate-shake">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="flex-1">
                 <span>{errorMessage}</span>
@@ -263,7 +264,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           )}
 
           {infoMessage && (
-            <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2.5">
+            <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs flex items-center gap-2.5 animate-fade-in">
               <Info className="w-4 h-4 shrink-0" />
               <span>{infoMessage}</span>
             </div>
@@ -276,13 +277,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                 Account Email Address
               </label>
               <div className="relative">
-                <Mail className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${secondaryText}`} />
+                <Mail className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${secondaryText} transition-colors`} />
                 <input
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="Enter email address"
-                  className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${inputBg} ${cardBorder} ${primaryText}`}
+                  className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl border text-xs sm:text-sm input-interactive ${inputBg} ${cardBorder} ${primaryText}`}
                 />
               </div>
             </div>
@@ -290,18 +291,18 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             <div>
               <label className={`text-xs font-bold block mb-1.5 ${primaryText}`}>Password</label>
               <div className="relative">
-                <Lock className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${secondaryText}`} />
+                <Lock className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${secondaryText} transition-colors`} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   placeholder="Enter account password"
-                  className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-[#E96746] transition ${inputBg} ${cardBorder} ${primaryText}`}
+                  className={`w-full pl-10 pr-10 py-2.5 rounded-xl border text-xs sm:text-sm input-interactive ${inputBg} ${cardBorder} ${primaryText}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg ${secondaryText} hover:${primaryText} cursor-pointer`}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg ${secondaryText} hover:${primaryText} cursor-pointer transition-transform duration-150 active:scale-90`}
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -310,28 +311,31 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
+              <label className="flex items-center gap-2 cursor-pointer select-none group">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="rounded-sm accent-[#E96746]"
+                  className="rounded-sm accent-[#E96746] cursor-pointer transition-transform group-hover:scale-105"
                 />
-                <span className={secondaryText}>Remember session</span>
+                <span className={`${secondaryText} transition-colors group-hover:${primaryText}`}>Remember session</span>
               </label>
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting || (lockoutCountdown !== null && lockoutCountdown > 0)}
-              className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] transition-all hover:scale-101 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-md flex items-center justify-center gap-2 cursor-pointer bg-[#E96746] hover:bg-[#D45333] dark:bg-[#F07856] dark:hover:bg-[#D95D3B] btn-interactive hover-lift disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
-                <span>Verifying Credentials...</span>
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Verifying Credentials...</span>
+                </span>
               ) : (
                 <>
                   <span>Sign In to {selectedRoleTab === 'admin' ? 'Admin Portal' : 'Academy'}</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </>
               )}
             </button>
