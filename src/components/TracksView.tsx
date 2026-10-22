@@ -7,9 +7,13 @@ import {
   Bookmark,
   Search,
   Building,
-  Lock
+  Lock,
+  Shield,
+  Crown,
+  GraduationCap
 } from 'lucide-react';
 import { LearningTrack, Lesson, UserProfile, UserRole } from '../types';
+import { LEVEL_TIERS, isDifficultyUnlocked } from '../services/gamification';
 
 interface TracksViewProps {
   tracks: LearningTrack[];
@@ -126,6 +130,79 @@ export const TracksView: React.FC<TracksViewProps> = ({
                 {t.id === 'accounting' ? 'Accounting' : t.id === 'economics' ? 'Economics' : 'Finance'}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Career Rank & Difficulty Unlock Status Strip */}
+        <div
+          className={`mt-4 p-3.5 sm:p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-2xs ${
+            isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#EDE3D2]'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#E96746]/10 dark:bg-[#F07856]/20 text-[#E96746] dark:text-[#F07856] flex items-center justify-center font-bold">
+              {currentRole === 'admin' ? <Shield className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className={`text-xs font-black ${isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'}`}>
+                  {currentRole === 'admin'
+                    ? 'Faculty Administrator'
+                    : `Career Rank: ${LEVEL_TIERS.find((t) => t.level === userProfile.level)?.title || 'Intern'} (Level ${userProfile.level})`}
+                </span>
+                {currentRole === 'admin' && (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                    Admin Exemption Active
+                  </span>
+                )}
+              </div>
+              <span className={`text-[11px] block mt-0.5 ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                {currentRole === 'admin'
+                  ? 'Unrestricted access to all question difficulty tiers across all curriculum tracks.'
+                  : userProfile.level <= 3
+                  ? 'Access to all Easy questions • Intermediate unlocks at Vice President (Level 4) • Hard unlocks at CFO (Level 6)'
+                  : userProfile.level <= 5
+                  ? 'Easy & Intermediate questions unlocked • Hard questions unlock at CFO (Level 6)'
+                  : 'CFO Master Rank: All difficulty levels (Easy, Intermediate, Hard) unlocked!'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 self-start md:self-auto shrink-0">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+              Easy
+            </span>
+
+            {currentRole === 'admin' || isDifficultyUnlocked('intermediate', userProfile.level, currentRole) ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60">
+                <CheckCircle2 className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                Intermediate
+              </span>
+            ) : (
+              <span
+                title="Intermediate questions unlock at Vice President (Level 4, 1,000 XP)"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700"
+              >
+                <Lock className="w-3 h-3 text-slate-400" />
+                Intermediate (VP+)
+              </span>
+            )}
+
+            {currentRole === 'admin' || isDifficultyUnlocked('advanced', userProfile.level, currentRole) ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700/60">
+                <CheckCircle2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                Hard
+              </span>
+            ) : (
+              <span
+                title="Hard questions unlock at CFO (Level 6, 3,500 XP)"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700"
+              >
+                <Lock className="w-3 h-3 text-slate-400" />
+                Hard (CFO)
+              </span>
+            )}
           </div>
         </div>
 

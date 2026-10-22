@@ -925,6 +925,7 @@ export default function App() {
           lesson={activeQuizModal.lesson}
           questions={activeQuizModal.questions}
           userProfile={userProfile}
+          currentRole={currentRole}
           isOpen={Boolean(activeQuizModal)}
           onClose={() => setActiveQuizModal(null)}
           onQuizComplete={handleQuizComplete}

@@ -29,8 +29,14 @@ import {
   Lock,
   LogOut
 } from 'lucide-react';
-import { UserProfile, LegalDocId, UserRole } from '../types';
-import { calculateLevelProgress } from '../services/gamification';
+import { UserProfile, LegalDocId, UserRole, Achievement } from '../types';
+import {
+  calculateLevelProgress,
+  LEVEL_TIERS,
+  isDifficultyUnlocked,
+  getUnlockedDifficulties,
+  DIFFICULTY_TIERS
+} from '../services/gamification';
 import { UserAvatar } from './UserAvatar';
 import { dataService } from '../services/dataService';
 import {
@@ -943,6 +949,148 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Six Career-Inspired Ranks & Difficulty Unlocks Ladder */}
+      <div
+        className={`p-6 rounded-2xl border space-y-6 transition-colors shadow-2xs ${
+          isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-[#FCE5DC] text-[#F07856]">
+                FinLingo Career Ladder
+              </span>
+              {currentRole === 'admin' && (
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300">
+                  Admin Exemption
+                </span>
+              )}
+            </div>
+            <h3
+              className={`font-black text-lg sm:text-xl mt-1 tracking-tight ${
+                isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+              }`}
+            >
+              Six Career-Inspired Ranks &amp; Difficulty Unlocks
+            </h3>
+            <p
+              className={`text-xs mt-0.5 leading-relaxed ${
+                isDarkMode ? 'text-[#E8F0F8]/70' : 'text-[#263238]/70'
+              }`}
+            >
+              Students advance through 6 sequential career milestones. Higher ranks automatically unlock Intermediate and Hard question difficulty tiers.
+            </p>
+          </div>
+
+          <div
+            className={`px-4 py-2.5 rounded-xl border text-xs font-bold shrink-0 flex items-center gap-2.5 ${
+              isDarkMode ? 'bg-[#0B192C] border-[#1E3A5F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
+            }`}
+          >
+            <Crown className="w-4 h-4 text-[#F07856]" />
+            <div>
+              <span className="block text-[10px] uppercase text-[#F07856] font-extrabold">Active Status</span>
+              <span className={isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'}>
+                {currentRole === 'admin' ? 'Faculty Admin (Exempt)' : `${userProfile.levelTitle} (Level ${userProfile.level})`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 6 Career Ranks Cards in exact order */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {LEVEL_TIERS.map((tier) => {
+            const isCurrent = currentRole !== 'admin' && userProfile.level === tier.level;
+            const isCompleted = currentRole !== 'admin' && userProfile.level > tier.level;
+            const isUpcoming = currentRole !== 'admin' && userProfile.level < tier.level;
+
+            return (
+              <div
+                key={tier.level}
+                className={`p-4 rounded-2xl border transition-all flex flex-col justify-between ${
+                  isCurrent
+                    ? 'border-[#F07856] bg-[#FEF6F3] dark:bg-[#1C2C40] ring-2 ring-[#F07856]/20 shadow-sm'
+                    : isCompleted
+                    ? 'border-emerald-300 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/20'
+                    : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#0B192C]/40 opacity-75'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                      {tier.level}
+                    </span>
+                    {isCompleted ? (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Mastered
+                      </span>
+                    ) : isCurrent ? (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-[#F07856] text-white">
+                        Current Rank
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Locked
+                      </span>
+                    )}
+                  </div>
+
+                  <h4
+                    className={`font-black text-base ${
+                      isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+                    }`}
+                  >
+                    {tier.title}
+                  </h4>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                    {tier.minXp} XP required
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Difficulty Access:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      <Check className="w-2.5 h-2.5" />
+                      Easy
+                    </span>
+
+                    {tier.level >= 4 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                        <Check className="w-2.5 h-2.5" />
+                        Intermediate
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <Lock className="w-2.5 h-2.5" />
+                        Intermediate
+                      </span>
+                    )}
+
+                    {tier.level >= 6 ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300">
+                        <Check className="w-2.5 h-2.5" />
+                        Hard
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <Lock className="w-2.5 h-2.5" />
+                        Hard
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

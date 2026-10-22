@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   CheckCircle2,
@@ -11,16 +11,30 @@ import {
   Award,
   Clock,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  Lock,
+  ShieldCheck,
+  GraduationCap,
+  Shield
 } from 'lucide-react';
-import { QuizQuestion, Lesson, UserProfile } from '../types';
-import { XP_REWARDS } from '../services/gamification';
+import { QuizQuestion, Lesson, UserProfile, UserRole } from '../types';
+import {
+  XP_REWARDS,
+  isDifficultyUnlocked,
+  getUnlockedDifficulties,
+  DIFFICULTY_TIERS,
+  QuestionDifficulty,
+  getDifficultyDisplayLabel,
+  getDifficultyRequirementLabel,
+  LEVEL_TIERS
+} from '../services/gamification';
 import { getEnhancedExplanation } from '../services/explanationHelper';
 
 interface QuizModalProps {
   lesson: Lesson | null;
   questions: QuizQuestion[];
   userProfile?: UserProfile;
+  currentRole?: UserRole;
   isOpen: boolean;
   onClose: () => void;
   onQuizComplete: (
@@ -41,6 +55,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   lesson,
   questions,
   userProfile,
+  currentRole = 'user',
   isOpen,
   onClose,
   onQuizComplete,
@@ -51,6 +66,8 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [quizPhase, setQuizPhase] = useState<'intro' | 'active' | 'results'>('intro');
   const [activeSessionLength, setActiveSessionLength] = useState<number>(5);
   const [sessionQuestions, setSessionQuestions] = useState<QuizQuestion[]>([]);
+  const [selectedDifficultyFilter, setSelectedDifficultyFilter] = useState<'all' | QuestionDifficulty>('all');
+  const [difficultyNotice, setDifficultyNotice] = useState<string | null>(null);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -63,6 +80,31 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [isXpAwarded, setIsXpAwarded] = useState(false);
   const [sessionAwardedXp, setSessionAwardedXp] = useState<number>(0);
   const [isRepeatAttempt, setIsRepeatAttempt] = useState<boolean>(false);
+
+  // Career rank & difficulty calculations
+  const studentLevel = userProfile?.level ?? 1;
+  const currentRankInfo = LEVEL_TIERS.find((t) => t.level === studentLevel) || LEVEL_TIERS[0];
+  const isAdmin = currentRole === 'admin';
+
+  // Determine difficulty unlock statuses for this user
+  const isIntermediateUnlocked = isAdmin || studentLevel >= 4;
+  const isHardUnlocked = isAdmin || studentLevel >= 6;
+
+  // Question counts in current pool
+  const countEasy = useMemo(() => questions.filter((q) => q.difficulty === 'beginner').length, [questions]);
+  const countIntermediate = useMemo(() => questions.filter((q) => q.difficulty === 'intermediate').length, [questions]);
+  const countHard = useMemo(() => questions.filter((q) => q.difficulty === 'advanced').length, [questions]);
+
+  // Questions unlocked for this user
+  const unlockedQuestions = useMemo(() => {
+    return questions.filter((q) => isDifficultyUnlocked(q.difficulty, studentLevel, currentRole));
+  }, [questions, studentLevel, currentRole]);
+
+  // Questions matching active difficulty filter
+  const activeFilteredQuestions = useMemo(() => {
+    if (selectedDifficultyFilter === 'all') return unlockedQuestions;
+    return unlockedQuestions.filter((q) => q.difficulty === selectedDifficultyFilter);
+  }, [unlockedQuestions, selectedDifficultyFilter]);
 
   // Initialize questions session on open
   useEffect(() => {
@@ -77,9 +119,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       setSessionAwardedXp(0);
       setIsRepeatAttempt(false);
       setElapsedSeconds(0);
-      setActiveSessionLength(Math.min(5, questions.length));
+      setSelectedDifficultyFilter('all');
+      setDifficultyNotice(null);
+      const unlockedCount = questions.filter((q) =>
+        isDifficultyUnlocked(q.difficulty, userProfile?.level ?? 1, currentRole)
+      ).length;
+      setActiveSessionLength(Math.min(5, Math.max(1, unlockedCount)));
     }
-  }, [isOpen, questions]);
+  }, [isOpen, questions, userProfile?.level, currentRole]);
 
   // Elapsed timer during active quiz
   useEffect(() => {
@@ -95,7 +142,11 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   if (!isOpen || !lesson || questions.length === 0) return null;
 
   const handleStartQuiz = () => {
-    const subset = questions.slice(0, activeSessionLength);
+    if (activeFilteredQuestions.length === 0) {
+      setDifficultyNotice('No unlocked questions available for the selected difficulty at your current rank.');
+      return;
+    }
+    const subset = activeFilteredQuestions.slice(0, activeSessionLength);
     setSessionQuestions(subset);
     setQuizPhase('active');
     setCurrentIndex(0);
@@ -233,6 +284,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 isDarkMode ? 'bg-[#0B192C] text-[#E2E8F0]' : 'bg-[#FFF8ED] text-[#263238]'
               }`}
             >
+              {/* Module & Topic Header Card */}
               <div
                 className={`p-5 rounded-2xl border shadow-2xs space-y-3 ${
                   isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
@@ -247,8 +299,200 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                   <span>Topic: {lesson.term}</span>
                 </div>
                 <p className="text-xs sm:text-sm leading-relaxed">
-                  Evaluate your conceptual mastery through active retrieval questions. Missed items will automatically be queued for spaced repetition practice.
+                  Evaluate your conceptual mastery through active retrieval questions. Questions unlock automatically as you advance through the six career ranks.
                 </p>
+              </div>
+
+              {/* Career Rank & Difficulty Access Section */}
+              <div
+                className={`p-5 rounded-2xl border space-y-4 shadow-2xs ${
+                  isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#EDE3D2]'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-200 dark:border-slate-700/60">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#E96746]/10 dark:bg-[#F07856]/20 text-[#E96746] dark:text-[#F07856] flex items-center justify-center font-bold">
+                      {isAdmin ? <Shield className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-wider text-[#E96746] dark:text-[#F07856]">
+                        {isAdmin ? 'Faculty Administrator' : `Current Rank: ${currentRankInfo.title} (Level ${studentLevel})`}
+                      </div>
+                      <div className={`text-xs ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                        {isAdmin
+                          ? 'Admin Exemption: Unrestricted access to all Easy, Intermediate, and Hard questions.'
+                          : studentLevel <= 3
+                          ? 'Access to Easy questions only • Intermediate unlocks at Vice President • Hard unlocks at CFO'
+                          : studentLevel <= 5
+                          ? 'Easy & Intermediate questions unlocked • Hard questions unlock at CFO'
+                          : 'CFO Master Rank: All difficulty levels (Easy, Intermediate, Hard) unlocked!'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {isAdmin ? (
+                    <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                      Admin Exempt
+                    </span>
+                  ) : (
+                    <span className="self-start sm:self-auto px-2.5 py-1 rounded-full text-[11px] font-extrabold uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                      {unlockedQuestions.length} Questions Unlocked
+                    </span>
+                  )}
+                </div>
+
+                {/* Difficulty Selector Tabs */}
+                <div>
+                  <label
+                    className={`block text-xs font-bold uppercase tracking-wider mb-2 ${
+                      isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
+                    }`}
+                  >
+                    Select Question Difficulty:
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {/* All Unlocked Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDifficultyFilter('all');
+                        setDifficultyNotice(null);
+                        setActiveSessionLength(Math.min(5, Math.max(1, unlockedQuestions.length)));
+                      }}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer ${
+                        selectedDifficultyFilter === 'all'
+                          ? 'border-[#E96746] dark:border-[#F07856] bg-[#FEF6F3] dark:bg-[#1E2E42] shadow-xs'
+                          : isDarkMode
+                          ? 'border-[#1E3A5F] bg-[#0B192C] hover:border-slate-600'
+                          : 'border-[#EDE3D2] bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold">All Unlocked</span>
+                        <CheckCircle2 className={`w-3.5 h-3.5 ${selectedDifficultyFilter === 'all' ? 'text-[#E96746] dark:text-[#F07856]' : 'opacity-40'}`} />
+                      </div>
+                      <span className={`text-[11px] mt-1 ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                        {unlockedQuestions.length} Available
+                      </span>
+                    </button>
+
+                    {/* Easy (Beginner) Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDifficultyFilter('beginner');
+                        setDifficultyNotice(null);
+                        setActiveSessionLength(Math.min(5, Math.max(1, countEasy)));
+                      }}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition cursor-pointer ${
+                        selectedDifficultyFilter === 'beginner'
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 shadow-xs'
+                          : isDarkMode
+                          ? 'border-[#1E3A5F] bg-[#0B192C] hover:border-slate-600'
+                          : 'border-[#EDE3D2] bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-400">Easy</span>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Unlocked ✓</span>
+                      </div>
+                      <span className={`text-[11px] mt-1 ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                        {countEasy} Qs (Intern+)
+                      </span>
+                    </button>
+
+                    {/* Intermediate Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isIntermediateUnlocked) {
+                          setDifficultyNotice('🔒 Intermediate questions are locked. They unlock at Vice President (Level 4, 1,000 XP). Complete lessons to rank up!');
+                          return;
+                        }
+                        setSelectedDifficultyFilter('intermediate');
+                        setDifficultyNotice(null);
+                        setActiveSessionLength(Math.min(5, Math.max(1, countIntermediate)));
+                      }}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition ${
+                        isIntermediateUnlocked
+                          ? selectedDifficultyFilter === 'intermediate'
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/40 shadow-xs cursor-pointer'
+                            : isDarkMode
+                            ? 'border-[#1E3A5F] bg-[#0B192C] hover:border-slate-600 cursor-pointer'
+                            : 'border-[#EDE3D2] bg-slate-50 hover:border-slate-300 cursor-pointer'
+                          : 'border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-[#0B1626] opacity-65 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-extrabold ${isIntermediateUnlocked ? 'text-blue-700 dark:text-blue-400' : 'text-slate-500'}`}>
+                          Intermediate
+                        </span>
+                        {isIntermediateUnlocked ? (
+                          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">Unlocked ✓</span>
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        )}
+                      </div>
+                      <span className={`text-[11px] mt-1 ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                        {isIntermediateUnlocked ? `${countIntermediate} Qs (VP+)` : 'Unlocks at VP'}
+                      </span>
+                    </button>
+
+                    {/* Hard (Advanced) Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!isHardUnlocked) {
+                          setDifficultyNotice('🔒 Hard questions are locked. They unlock at Chief Financial Officer (CFO, Level 6, 3,500 XP). Complete lessons to rank up!');
+                          return;
+                        }
+                        setSelectedDifficultyFilter('advanced');
+                        setDifficultyNotice(null);
+                        setActiveSessionLength(Math.min(5, Math.max(1, countHard)));
+                      }}
+                      className={`p-3 rounded-xl border text-left flex flex-col justify-between transition ${
+                        isHardUnlocked
+                          ? selectedDifficultyFilter === 'advanced'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 shadow-xs cursor-pointer'
+                            : isDarkMode
+                            ? 'border-[#1E3A5F] bg-[#0B192C] hover:border-slate-600 cursor-pointer'
+                            : 'border-[#EDE3D2] bg-slate-50 hover:border-slate-300 cursor-pointer'
+                          : 'border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-[#0B1626] opacity-65 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-extrabold ${isHardUnlocked ? 'text-purple-700 dark:text-purple-400' : 'text-slate-500'}`}>
+                          Hard
+                        </span>
+                        {isHardUnlocked ? (
+                          <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Unlocked ✓</span>
+                        ) : (
+                          <Lock className="w-3.5 h-3.5 text-slate-400" />
+                        )}
+                      </div>
+                      <span className={`text-[11px] mt-1 ${isDarkMode ? 'text-[#C1CDDC]' : 'text-[#52647A]'}`}>
+                        {isHardUnlocked ? `${countHard} Qs (CFO)` : 'Unlocks at CFO'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Locked Difficulty Notice Alert */}
+                {difficultyNotice && (
+                  <div className="p-3.5 rounded-xl border border-amber-300 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in duration-200">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                      <span>{difficultyNotice}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDifficultyNotice(null)}
+                      className="text-amber-700 dark:text-amber-300 hover:underline font-bold text-[11px] shrink-0"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Previous Attempt Performance Card if retaking */}
@@ -289,14 +533,14 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                       isDarkMode ? 'text-[#E8F0F8]/60' : 'text-[#263238]/60'
                     }`}
                   >
-                    Question Pool
+                    Eligible Questions
                   </span>
                   <span
                     className={`text-xl font-extrabold mt-1 block ${
                       isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'
                     }`}
                   >
-                    {questions.length} Qs
+                    {activeFilteredQuestions.length} Qs
                   </span>
                 </div>
                 <div
@@ -332,13 +576,13 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                     XP Potential
                   </span>
                   <span className="text-xl font-extrabold text-[#F07856] mt-1 block">
-                    +{activeSessionLength * XP_REWARDS.QUIZ_CORRECT_ANSWER} XP
+                    +{Math.min(activeSessionLength, activeFilteredQuestions.length) * XP_REWARDS.QUIZ_CORRECT_ANSWER} XP
                   </span>
                 </div>
               </div>
 
               {/* Session Length Selector */}
-              {questions.length > 5 && (
+              {activeFilteredQuestions.length > 5 && (
                 <div
                   className={`p-4 rounded-2xl border space-y-2 ${
                     isDarkMode ? 'bg-[#132238] border-[#1E3A5F]' : 'bg-white border-[#E8F0F8]'
@@ -352,9 +596,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                     Choose Questions Per Session:
                   </label>
                   <div className="flex items-center gap-2">
-                    {[5, 10, questions.length].map((count) => {
-                      if (count > questions.length && count !== questions.length) return null;
-                      const label = count === questions.length ? `All (${count})` : `${count} Questions`;
+                    {[5, 10, activeFilteredQuestions.length].map((count) => {
+                      if (count > activeFilteredQuestions.length && count !== activeFilteredQuestions.length) return null;
+                      const label = count === activeFilteredQuestions.length ? `All (${count})` : `${count} Questions`;
                       return (
                         <button
                           key={count}
@@ -392,8 +636,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 Cancel
               </button>
               <button
+                disabled={activeFilteredQuestions.length === 0}
                 onClick={handleStartQuiz}
-                className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#F07856] hover:bg-[#D95D3B] text-white shadow-md shadow-[#F07856]/30 flex items-center gap-2 transition"
+                className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-[#F07856] hover:bg-[#D95D3B] disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-md shadow-[#F07856]/30 flex items-center gap-2 transition"
               >
                 <span>Start Quiz Session</span>
                 <ArrowRight className="w-4 h-4" />
@@ -491,15 +736,47 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
               {/* Question Prompt */}
               <div>
-                <span
-                  className={`inline-block text-[11px] font-bold uppercase tracking-wider mb-1.5 px-2.5 py-0.5 rounded-md border ${
-                    isDarkMode
-                      ? 'bg-[#1E3A5F] text-[#F07856] border-[#F07856]/30'
-                      : 'bg-[#FCE5DC] text-[#F07856] border-[#F07856]/20'
-                  }`}
-                >
-                  {currentQuestion.topicTag}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span
+                    className={`inline-block text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                      isDarkMode
+                        ? 'bg-[#1E3A5F] text-[#F07856] border-[#F07856]/30'
+                        : 'bg-[#FCE5DC] text-[#F07856] border-[#F07856]/20'
+                    }`}
+                  >
+                    {currentQuestion.topicTag}
+                  </span>
+
+                  {/* Difficulty Level Indicator */}
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
+                      currentQuestion.difficulty === 'beginner'
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/60'
+                        : currentQuestion.difficulty === 'intermediate'
+                        ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700/60'
+                        : 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700/60'
+                    }`}
+                  >
+                    <span>
+                      {currentQuestion.difficulty === 'beginner'
+                        ? 'Easy'
+                        : currentQuestion.difficulty === 'intermediate'
+                        ? 'Intermediate'
+                        : 'Hard'}
+                    </span>
+                    <span className="opacity-75 text-[10px] font-normal">
+                      • {currentQuestion.difficulty === 'beginner' ? 'Intern+' : currentQuestion.difficulty === 'intermediate' ? 'VP+' : 'CFO'}
+                    </span>
+                  </span>
+
+                  {isAdmin && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                      <Shield className="w-3 h-3" />
+                      <span>Admin Preview</span>
+                    </span>
+                  )}
+                </div>
+
                 <h3
                   className={`text-lg sm:text-xl font-extrabold leading-snug ${
                     isDarkMode ? 'text-[#FFF8ED]' : 'text-[#173B63]'

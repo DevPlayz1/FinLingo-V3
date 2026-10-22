@@ -22,10 +22,17 @@ import {
   Trophy,
   User,
   Coins,
-  Crown
+  Crown,
+  Shield
 } from 'lucide-react';
 import { UserProfile, LearningTrack, Lesson, ActiveTab, LeaderboardEntry, UserRole, SpacedRepetitionItem } from '../types';
-import { calculateLevelProgress, LEVEL_TIERS } from '../services/gamification';
+import {
+  calculateLevelProgress,
+  LEVEL_TIERS,
+  isDifficultyUnlocked,
+  getUnlockedDifficulties,
+  DIFFICULTY_TIERS
+} from '../services/gamification';
 import { UserAvatar } from './UserAvatar';
 
 interface DashboardViewProps {
@@ -243,6 +250,242 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Arched Windows */}
             <path d="M 188 75 C 188 68, 212 68, 212 75 L 212 95 L 188 95 Z" fill="#1E3A8A" />
           </svg>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          CAREER RANK & DIFFICULTY UNLOCKS SHOWCASE
+         ========================================================================= */}
+      <section
+        aria-label="Career Rank and Question Difficulty Progression"
+        className={`rounded-3xl border p-5 sm:p-6 transition-colors shadow-xs ${cardBg} ${cardBorder}`}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-[#E96746]/10 text-[#E96746] dark:bg-[#F07856]/20 dark:text-[#F07856] border border-[#E96746]/20">
+                Career Progression
+              </span>
+              {currentRole === 'admin' && (
+                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Admin Exemption
+                </span>
+              )}
+            </div>
+            <h2 className={`text-lg sm:text-xl font-black ${primaryText}`}>
+              Six Career-Inspired Ranks &amp; Difficulty Unlocks
+            </h2>
+            <p className={`text-xs ${secondaryText}`}>
+              Advance through 6 executive levels to automatically unlock Intermediate and Hard questions.
+            </p>
+          </div>
+
+          {/* Current Rank Badge */}
+          <div className="flex items-center gap-3 p-2.5 sm:px-4 sm:py-2.5 rounded-2xl bg-slate-50 dark:bg-[#0B192C] border border-slate-200 dark:border-slate-800 self-start lg:self-auto">
+            <div className="w-10 h-10 rounded-xl bg-[#E96746] text-white flex items-center justify-center font-black shadow-xs">
+              <Crown className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#E96746] dark:text-[#F07856] block">
+                Active Career Rank
+              </span>
+              <span className={`text-base font-black ${primaryText}`}>
+                {currentRole === 'admin' ? 'Faculty Admin (Exempt)' : `${userProfile.levelTitle} (Level ${userProfile.level})`}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 6 Career Ranks Stepper */}
+        <div className="pt-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-between">
+            <span>Career Rank Progression Ladder</span>
+            <span className="text-[11px] font-normal normal-case text-slate-400">
+              {levelProgress.neededXp > 0 ? `${levelProgress.neededXp} XP to ${nextTier.title}` : 'Executive Level Mastered'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            {LEVEL_TIERS.map((tier) => {
+              const isCurrent = currentRole !== 'admin' && userProfile.level === tier.level;
+              const isCompleted = currentRole !== 'admin' && userProfile.level > tier.level;
+
+              return (
+                <div
+                  key={tier.level}
+                  className={`p-3 rounded-2xl border transition-all flex flex-col justify-between ${
+                    isCurrent
+                      ? 'border-[#E96746] dark:border-[#F07856] bg-[#FEF6F3] dark:bg-[#1C2C40] shadow-sm ring-2 ring-[#E96746]/20'
+                      : isCompleted
+                      ? 'border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/50 dark:bg-emerald-950/20'
+                      : 'border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-[#0B192C]/50 opacity-70'
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="w-5 h-5 rounded-md text-[10px] font-black flex items-center justify-center bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        {tier.level}
+                      </span>
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      ) : isCurrent ? (
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-[#E96746] text-white">
+                          Current
+                        </span>
+                      ) : (
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
+                      )}
+                    </div>
+                    <div className={`font-extrabold text-xs sm:text-sm line-clamp-1 ${primaryText}`}>
+                      {tier.title}
+                    </div>
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-semibold">
+                      {tier.minXp} XP
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-700/60 text-[10px] font-bold">
+                    {tier.level <= 3 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400">Easy only</span>
+                    ) : tier.level <= 5 ? (
+                      <span className="text-blue-600 dark:text-blue-400">Easy + Intermediate</span>
+                    ) : (
+                      <span className="text-purple-600 dark:text-purple-400">All difficulties</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3 Difficulty Tiers Status Grid */}
+        <div className="mt-5 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
+            Question Difficulty Unlocking Rules
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {/* Easy Card */}
+            <div className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/40 dark:bg-emerald-950/20 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 flex items-center justify-center font-bold text-xs">
+                      1
+                    </div>
+                    <span className="font-extrabold text-sm text-emerald-900 dark:text-emerald-200">
+                      Easy Questions
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Unlocked
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Foundational double-entry bookkeeping, micro &amp; macro basics, and fundamental financial terminology.
+                </p>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-emerald-200/60 dark:border-emerald-900/40 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+                <span>Access: All Ranks</span>
+                <span>Intern, Analyst, Associate+</span>
+              </div>
+            </div>
+
+            {/* Intermediate Card */}
+            <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+              currentRole === 'admin' || userProfile.level >= 4
+                ? 'border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-[#0B192C]/40 opacity-80'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                      currentRole === 'admin' || userProfile.level >= 4
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                    }`}>
+                      2
+                    </div>
+                    <span className={`font-extrabold text-sm ${
+                      currentRole === 'admin' || userProfile.level >= 4 ? 'text-blue-900 dark:text-blue-200' : 'text-slate-700 dark:text-slate-300'
+                    }`}>
+                      Intermediate Questions
+                    </span>
+                  </div>
+                  {currentRole === 'admin' || userProfile.level >= 4 ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Unlocked
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Multi-step statement reconciliations, elasticity calculations, working capital adjustments, and DCF drivers.
+                </p>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px] font-bold flex items-center justify-between">
+                <span className={currentRole === 'admin' || userProfile.level >= 4 ? 'text-blue-700 dark:text-blue-400' : 'text-slate-500'}>
+                  Requires: Vice President (Level 4)
+                </span>
+                <span className="text-[10px] text-slate-500 font-semibold">1,000 XP</span>
+              </div>
+            </div>
+
+            {/* Hard Card */}
+            <div className={`p-4 rounded-2xl border flex flex-col justify-between ${
+              currentRole === 'admin' || userProfile.level >= 6
+                ? 'border-purple-200 dark:border-purple-900/60 bg-purple-50/40 dark:bg-purple-950/20'
+                : 'border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-[#0B192C]/40 opacity-80'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
+                      currentRole === 'admin' || userProfile.level >= 6
+                        ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500'
+                    }`}>
+                      3
+                    </div>
+                    <span className={`font-extrabold text-sm ${
+                      currentRole === 'admin' || userProfile.level >= 6 ? 'text-purple-900 dark:text-purple-200' : 'text-slate-700 dark:text-slate-300'
+                    }`}>
+                      Hard Questions
+                    </span>
+                  </div>
+                  {currentRole === 'admin' || userProfile.level >= 6 ? (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Unlocked
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Locked
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                  Terminal value triangulation, LIFO liquidation tax impacts, Gordon Growth vs Exit Multiples, and M&amp;A models.
+                </p>
+              </div>
+              <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px] font-bold flex items-center justify-between">
+                <span className={currentRole === 'admin' || userProfile.level >= 6 ? 'text-purple-700 dark:text-purple-400' : 'text-slate-500'}>
+                  Requires: CFO (Level 6)
+                </span>
+                <span className="text-[10px] text-slate-500 font-semibold">3,500 XP</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

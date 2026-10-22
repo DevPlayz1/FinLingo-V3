@@ -740,6 +740,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </button>
           </div>
 
+          {/* Admin Exemption Status Banner */}
+          <div className="p-3.5 sm:p-4 rounded-2xl border border-amber-300 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 flex items-center justify-between gap-3 text-xs text-amber-900 dark:text-amber-200">
+            <div className="flex items-center gap-2.5">
+              <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>
+                <strong>Admin Exemption Active:</strong> As Faculty Administrator, you have unrestricted access to create, edit, delete, preview, and quiz across all three difficulty levels (<strong>Easy</strong>, <strong>Intermediate</strong>, <strong>Hard</strong>) regardless of career rank. Difficulty locking applies exclusively to Students.
+              </span>
+            </div>
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 shrink-0 border border-amber-500/30">
+              Unrestricted
+            </span>
+          </div>
+
           {/* Search & Multi-Filters Toolbar */}
           <div
             className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-3 ${
@@ -926,8 +939,18 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                           </span>
                         )}
 
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                          {question.difficulty}
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          question.difficulty === 'beginner'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300/40'
+                            : question.difficulty === 'intermediate'
+                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-300/40'
+                            : 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-300/40'
+                        }`}>
+                          {question.difficulty === 'beginner'
+                            ? 'Easy (Intern+)'
+                            : question.difficulty === 'intermediate'
+                            ? 'Intermediate (VP+)'
+                            : 'Hard (CFO)'}
                         </span>
 
                         <span className="text-[10px] font-bold text-[#E96746] dark:text-[#F07856]">
@@ -1518,9 +1541,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
                     }`}
                   >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="beginner">Easy (Intern, Analyst, Associate+)</option>
+                    <option value="intermediate">Intermediate (Vice President, Managing Director+)</option>
+                    <option value="advanced">Hard (CFO Only)</option>
                   </select>
                 </div>
 
@@ -1856,9 +1879,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       isDarkMode ? 'bg-[#0B1728] border-[#1E324F]' : 'bg-[#FFF8ED] border-[#EDE3D2]'
                     }`}
                   >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="beginner">Easy (Intern, Analyst, Associate+)</option>
+                    <option value="intermediate">Intermediate (Vice President, Managing Director+)</option>
+                    <option value="advanced">Hard (CFO Only)</option>
                   </select>
                 </div>
               </div>

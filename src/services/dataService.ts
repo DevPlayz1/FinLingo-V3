@@ -19,7 +19,7 @@ import {
   INITIAL_ACHIEVEMENTS,
   INITIAL_LEADERBOARD
 } from '../data/curriculum';
-import { getLevelInfo, XP_REWARDS } from './gamification';
+import { getLevelInfo, XP_REWARDS, isDifficultyUnlocked, getUnlockedDifficulties } from './gamification';
 import { PROF_ANJALI_SANE_AVATAR } from '../assets/adminAvatar';
 
 const STORAGE_KEYS = {
@@ -85,7 +85,7 @@ export const USER_DEFAULT_PROFILE: UserProfile = {
   major: 'Commerce & Quantitative Finance',
   graduationYear: '2026',
   level: 1,
-  levelTitle: 'Intern Scholar',
+  levelTitle: 'Intern',
   currentXp: 0,
   nextLevelXp: 200,
   streakDays: 0,
@@ -131,7 +131,7 @@ export const USER_ZEROED_PROFILE: UserProfile = {
   major: 'Commerce & Quantitative Finance',
   graduationYear: '2026',
   level: 1,
-  levelTitle: 'Intern Scholar',
+  levelTitle: 'Intern',
   currentXp: 0,
   nextLevelXp: 200,
   streakDays: 0,
@@ -176,10 +176,10 @@ export const ADMIN_DEFAULT_PROFILE: UserProfile = {
   university: 'Faculty of Commerce & Finance',
   major: 'Curriculum & Academic Governance',
   graduationYear: 'Faculty / Staff',
-  level: 10,
-  levelTitle: 'Chief Financial Officer',
-  currentXp: 2850,
-  nextLevelXp: 3000,
+  level: 6,
+  levelTitle: 'CFO',
+  currentXp: 3500,
+  nextLevelXp: 99999,
   streakDays: 45,
   lastActiveDate: new Date().toISOString().split('T')[0],
   completedLessonIds: [
@@ -435,6 +435,9 @@ class DataService {
     includeUnpublished?: boolean;
     difficulty?: 'beginner' | 'intermediate' | 'advanced' | 'all';
     source?: 'all' | 'original' | 'admin';
+    studentLevel?: number;
+    role?: UserRole;
+    onlyUnlockedForUser?: boolean;
   }): QuizQuestion[] {
     // 1. Load canonical 200-question base bank (never mutated in place)
     const base: QuizQuestion[] = JSON.parse(JSON.stringify(QUIZ_QUESTIONS)).map((q: QuizQuestion) => ({
@@ -490,15 +493,41 @@ class DataService {
       unified = unified.filter(q => q.source === options.source);
     }
 
+    // 11. Career Rank / Difficulty unlock filtering (Admin is strictly exempt)
+    if (options?.onlyUnlockedForUser && options.role !== 'admin') {
+      const studentLevel = options.studentLevel ?? this.getUserProfile('user').level;
+      unified = unified.filter(q => isDifficultyUnlocked(q.difficulty, studentLevel, 'user'));
+    }
+
     return unified;
   }
 
-  getQuestionsByLesson(lessonId: string, includeUnpublished = false): QuizQuestion[] {
-    return this.getQuestions({ lessonId, includeUnpublished });
+  getQuestionsByLesson(
+    lessonId: string,
+    includeUnpublished = false,
+    options?: { studentLevel?: number; role?: UserRole; onlyUnlockedForUser?: boolean }
+  ): QuizQuestion[] {
+    return this.getQuestions({
+      lessonId,
+      includeUnpublished,
+      studentLevel: options?.studentLevel,
+      role: options?.role,
+      onlyUnlockedForUser: options?.onlyUnlockedForUser
+    });
   }
 
-  getQuestionsByTrack(trackId: TrackId, includeUnpublished = false): QuizQuestion[] {
-    return this.getQuestions({ trackId, includeUnpublished });
+  getQuestionsByTrack(
+    trackId: TrackId,
+    includeUnpublished = false,
+    options?: { studentLevel?: number; role?: UserRole; onlyUnlockedForUser?: boolean }
+  ): QuizQuestion[] {
+    return this.getQuestions({
+      trackId,
+      includeUnpublished,
+      studentLevel: options?.studentLevel,
+      role: options?.role,
+      onlyUnlockedForUser: options?.onlyUnlockedForUser
+    });
   }
 
   getQuestionById(questionId: string): QuizQuestion | undefined {
